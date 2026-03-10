@@ -1,0 +1,92 @@
+from sqlalchemy import Column, Integer, String, ForeignKey, Text, DateTime, Enum
+from sqlalchemy.orm import relationship
+from sqlalchemy.sql import func
+from app.database import Base
+from app.models.lesson import lesson_knowledge
+import enum
+
+
+class NodeType(str, enum.Enum):
+    """Types of knowledge nodes"""
+    CONCEPT = "concept"
+    FORMULA = "formula"
+    THEOREM = "theorem"
+    EXAMPLE = "example"
+    DEFINITION = "definition"
+    PROCEDURE = "procedure"
+
+
+class DifficultyLevel(str, enum.Enum):
+    """Difficulty levels"""
+    BASIC = "basic"
+    INTERMEDIATE = "intermediate"
+    ADVANCED = "advanced"
+
+
+class RelationType(str, enum.Enum):
+    """Types of relationships between knowledge nodes"""
+    PREREQUISITE = "prerequisite"  # A requires B
+    BUILDS_ON = "builds_on"  # A builds on B
+    RELATES_TO = "relates_to"  # A relates to B
+    EXAMPLE_OF = "example_of"  # A is example of B
+    PART_OF = "part_of"  # A is part of B
+
+
+class KnowledgeNode(Base):
+    """Knowledge Graph Node - Represents a knowledge concept"""
+    __tablename__ = "knowledge_nodes"
+
+    id = Column(Integer, primary_key=True, index=True)
+    subject_id = Column(Integer, ForeignKey("subjects.id", ondelete="CASCADE"), nullable=False)
+    module_id = Column(Integer, ForeignKey("modules.id", ondelete="CASCADE"), nullable=True)
+    lesson_id = Column(Integer, ForeignKey("lessons.id", ondelete="SET NULL"), nullable=True)
+    grade = Column(Integer, nullable=False)
+    title = Column(String(200), nullable=False)
+    description = Column(Text, nullable=True)
+    node_type = Column(Enum(NodeType), default=NodeType.CONCEPT, nullable=False)
+    difficulty_level = Column(Enum(DifficultyLevel), default=DifficultyLevel.BASIC, nullable=False)
+    importance_weight = Column(Integer, default=1)  # 1-10 scale
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+    # Relationships
+    subject = relationship("Subject", back_populates="knowledge_nodes")
+    module = relationship("Module", back_populates="knowledge_nodes")
+    lessons = relationship("Lesson", secondary=lesson_knowledge, back_populates="knowledge_nodes")
+
+    # Self-referential relationships via edges
+    outgoing_edges = relationship(
+        "KnowledgeEdge",
+        foreign_keys="KnowledgeEdge.from_node_id",
+        back_populates="from_node",
+        cascade="all, delete-orphan"
+    )
+    incoming_edges = relationship(
+        "KnowledgeEdge",
+        foreign_keys="KnowledgeEdge.to_node_id",
+        back_populates="to_node",
+        cascade="all, delete-orphan"
+    )
+
+    questions = relationship("Question", back_populates="knowledge_node", cascade="all, delete-orphan")
+
+    def __repr__(self):
+        return f"<KnowledgeNode(id={self.id}, title={self.title}, type={self.node_type})>"
+
+
+class KnowledgeEdge(Base):
+    """Knowledge Graph Edge - Represents relationship between nodes"""
+    __tablename__ = "knowledge_edges"
+
+    id = Column(Integer, primary_key=True, index=True)
+    from_node_id = Column(Integer, ForeignKey("knowledge_nodes.id", ondelete="CASCADE"), nullable=False)
+    to_node_id = Column(Integer, ForeignKey("knowledge_nodes.id", ondelete="CASCADE"), nullable=False)
+    relation_type = Column(Enum(RelationType), nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    # Relationships
+    from_node = relationship("KnowledgeNode", foreign_keys=[from_node_id], back_populates="outgoing_edges")
+    to_node = relationship("KnowledgeNode", foreign_keys=[to_node_id], back_populates="incoming_edges")
+
+    def __repr__(self):
+        return f"<KnowledgeEdge(from={self.from_node_id}, to={self.to_node_id}, type={self.relation_type})>"

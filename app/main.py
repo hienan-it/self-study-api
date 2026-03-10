@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
-from app.api.routes import auth, users
+from app.api.routes import auth, users, lessons, modules, subjects
 from app.database import SessionLocal
 from app.utils.setup_admin import create_initial_admin
 
@@ -79,6 +79,9 @@ app.add_middleware(
 
 app.include_router(auth.router, prefix="/api")
 app.include_router(users.router, prefix="/api")
+app.include_router(lessons.router, prefix="/api")
+app.include_router(modules.router, prefix="/api")
+app.include_router(subjects.router, prefix="/api")
 
 
 # ============================================

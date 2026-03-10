@@ -4,7 +4,29 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="81777910-5c37-41d3-a883-dde6ae354888" name="Changes" comment="Setup basic auth and user api" />
+    <list default="true" id="81777910-5c37-41d3-a883-dde6ae354888" name="Changes" comment="Setup basic auth and user api">
+      <change afterPath="$PROJECT_DIR$/app/api/routes/lessons.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/api/routes/modules.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/api/routes/subjects.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/models/knowledge.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/models/session.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/schemas/module_lesson.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/schemas/subject.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/services/lesson_service.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/services/module_service.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/services/subject_service.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/models/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/models/__init__.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/models/generated_mindmap.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/models/knowledge_edge.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/models/knowledge_node.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/models/lesson.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/models/lesson.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/models/module.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/models/module.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/models/practice_result.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/models/question.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/models/question.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/models/study_session.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/models/subject.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/models/subject.py" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -106,7 +128,7 @@
       <workItem from="1771778629481" duration="3262000" />
       <workItem from="1772290989895" duration="914000" />
       <workItem from="1772320391061" duration="5498000" />
-      <workItem from="1773068822132" duration="11882000" />
+      <workItem from="1773068822132" duration="13117000" />
     </task>
     <task id="LOCAL-00001" summary="Setup basic auth and user api">
       <option name="closed" value="true" />
@@ -116,7 +138,15 @@
       <option name="project" value="LOCAL" />
       <updated>1773162693566</updated>
     </task>
-    <option name="localTasksCounter" value="2" />
+    <task id="LOCAL-00002" summary="Setup basic auth and user api">
+      <option name="closed" value="true" />
+      <created>1773163020973</created>
+      <option name="number" value="00002" />
+      <option name="presentableId" value="LOCAL-00002" />
+      <option name="project" value="LOCAL" />
+      <updated>1773163020976</updated>
+    </task>
+    <option name="localTasksCounter" value="3" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
