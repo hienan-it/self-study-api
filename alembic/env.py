@@ -9,7 +9,7 @@ from os.path import abspath, dirname
 sys.path.insert(0, dirname(dirname(abspath(__file__))))
 
 from app.database import Base
-from app.models.user import User  # Import all models
+import app.models
 from app.config import settings
 
 # this is the Alembic Config object

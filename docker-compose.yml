@@ -1,0 +1,48 @@
+services:
+  # Database: PostgreSQL
+  db:
+    image: postgres:16-alpine
+    container_name: learning_app_db
+    restart: always
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: learning_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  # Object Storage: MinIO
+  minio:
+    image: minio/minio
+    container_name: learning_app_minio
+    restart: always
+    ports:
+      - "9000:9000" # API port
+      - "9001:9001" # Web Console port
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    command: server /data --console-address ":9001"
+    volumes:
+      - minio_data:/data
+
+  # FastAPI Backend
+  backend:
+    build: .
+    container_name: learning_app_backend
+    volumes:
+      - .:/app
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgresql://user:password@db:5432/learning_db
+      MINIO_ENDPOINT: minio:9000
+    depends_on:
+      - db
+      - minio
+
+volumes:
+  postgres_data:
+  minio_data:
