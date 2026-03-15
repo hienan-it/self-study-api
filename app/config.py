@@ -23,6 +23,9 @@ class Settings(BaseSettings):
     MINIO_SECURE: bool = False  # False for local dev/docker
     MINIO_BUCKET_NAME: str = "learning-assets"
 
+    # OpenAI
+    OPENAI_API_KEY: str
+
     model_config = {
         "env_file": ".env",
         "case_sensitive": True,

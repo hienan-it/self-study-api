@@ -1,7 +1,8 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
-from app.api.routes import auth, users, lessons, modules, subjects
+from app.api.routes import auth, users, lessons, modules, subjects, knowledge, sessions
+from app.api.routes.ai import router as ai_router
 from app.database import SessionLocal
 from app.utils.setup_admin import create_initial_admin
 
@@ -82,6 +83,9 @@ app.include_router(users.router, prefix="/api")
 app.include_router(lessons.router, prefix="/api")
 app.include_router(modules.router, prefix="/api")
 app.include_router(subjects.router, prefix="/api")
+app.include_router(knowledge.router, prefix="/api")
+app.include_router(sessions.router, prefix="/api")
+app.include_router(ai_router, prefix="/api")
 
 
 # ============================================
