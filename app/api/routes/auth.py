@@ -1,7 +1,7 @@
 from datetime import timedelta
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
-from app.schemas.user import Token, UserCreate, UserResponse
+from app.schemas.user import Token, UserCreate, UserResponse, LoginRequest
 from app.core.security import create_access_token
 from app.config import settings
 from app.services.user_service import UserService, get_user_service
@@ -27,7 +27,7 @@ def register(
 
 @router.post("/login", response_model=Token)
 def login(
-        form_data: OAuth2PasswordRequestForm = Depends(),
+        login_data: LoginRequest,
         user_service: UserService = Depends(get_user_service)
 ):
     """
@@ -36,7 +36,7 @@ def login(
     Use the token in Authorization header: `Bearer <token>`
     """
     # Authenticate user
-    user = user_service.authenticate(form_data.username, form_data.password)
+    user = user_service.authenticate(login_data.username, login_data.password)
 
     if not user:
         raise HTTPException(

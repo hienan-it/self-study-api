@@ -1,13 +1,16 @@
-from pydantic import BaseModel, Field
-from datetime import datetime
-from typing import Optional, List
+from typing import Optional
+
+from pydantic import Field
+
+from app.schemas.base import APIModel
+from app.schemas.mixins.auditable import AuditableSchema
 
 
 # ============================================
 # MODULE SCHEMAS
 # ============================================
 
-class ModuleBase(BaseModel):
+class ModuleBase(APIModel):
     subject_id: int
     grade: int = Field(..., ge=1, le=12)
     name: str = Field(..., min_length=1, max_length=200)
@@ -19,7 +22,7 @@ class ModuleCreate(ModuleBase):
     pass
 
 
-class ModuleUpdate(BaseModel):
+class ModuleUpdate(APIModel):
     subject_id: Optional[int] = None
     grade: Optional[int] = Field(None, ge=1, le=12)
     name: Optional[str] = Field(None, min_length=1, max_length=200)
@@ -27,28 +30,20 @@ class ModuleUpdate(BaseModel):
     display_order: Optional[int] = None
 
 
-class ModuleResponse(ModuleBase):
+class ModuleResponse(ModuleBase, AuditableSchema):
     id: int
-    created_at: datetime
-    updated_at: Optional[datetime] = None
-
-    class Config:
-        from_attributes = True
 
 
 class ModuleWithLessons(ModuleResponse):
     """Module with lesson count"""
     lesson_count: int = 0
 
-    class Config:
-        from_attributes = True
-
 
 # ============================================
 # LESSON SCHEMAS
 # ============================================
 
-class LessonBase(BaseModel):
+class LessonBase(APIModel):
     module_id: int
     name: str = Field(..., min_length=1, max_length=200)
     content: Optional[str] = None
@@ -59,25 +54,17 @@ class LessonCreate(LessonBase):
     pass
 
 
-class LessonUpdate(BaseModel):
+class LessonUpdate(APIModel):
     module_id: Optional[int] = None
     name: Optional[str] = Field(None, min_length=1, max_length=200)
     content: Optional[str] = None
     display_order: Optional[int] = None
 
 
-class LessonResponse(LessonBase):
+class LessonResponse(LessonBase, AuditableSchema):
     id: int
-    created_at: datetime
-    updated_at: Optional[datetime] = None
-
-    class Config:
-        from_attributes = True
 
 
 class LessonWithKnowledge(LessonResponse):
     """Lesson with knowledge node info"""
     knowledge_node_count: int = 0
-
-    class Config:
-        from_attributes = True

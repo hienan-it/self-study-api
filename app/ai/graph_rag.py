@@ -22,7 +22,7 @@ from typing import List, Optional, Dict, Set
 from collections import deque
 from dataclasses import dataclass
 
-from app.models.knowledge import KnowledgeNode, KnowledgeEdge, DifficultyLevel, RelationType
+from app.db.models.knowledge import KnowledgeNode, KnowledgeEdge, DifficultyLevel, RelationType
 
 
 # ============================================

@@ -4,8 +4,8 @@ from typing import Optional, List, Dict
 
 from sqlalchemy.orm import Session as DBSession
 
-from app.database import get_db
-from app.models import StudySession, Lesson, DifficultyLevel, lesson_knowledge, PracticeResult
+from app.db.session import get_db
+from app.db.models import StudySession, Lesson, DifficultyLevel, lesson_knowledge, PracticeResult
 from app.schemas.session import StudySessionCreate, QuestionItem, PracticeResultCreate, MasteryReport
 from fastapi import HTTPException, Depends, status
 
@@ -25,9 +25,9 @@ class SessionService:
         # Validate lessons exist
         existing_ids = [
             r[0] for r in
-            self.db.query(Lesson.id).filter(Lesson.id.in_(data.selected_lessons)).all()
+            self.db.query(Lesson.id).filter(Lesson.id.in_(data.selectedLessons)).all()
         ]
-        missing = set(data.selected_lessons) - set(existing_ids)
+        missing = set(data.selectedLessons) - set(existing_ids)
         if missing:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -37,7 +37,7 @@ class SessionService:
         session = StudySession(
             user_id=user_id,
             grade=data.grade,
-            selected_lessons=data.selected_lessons,
+            selected_lessons=data.selectedLessons,
         )
         self.db.add(session)
         self.db.commit()
@@ -100,8 +100,7 @@ class SessionService:
         Weight = node.importance_weight (1-10 scale)
         Higher importance → more likely to be sampled.
         """
-        from app.models.knowledge import KnowledgeNode
-        from app.models.question import Question  # adjust import path if needed
+        from app.db.models.knowledge import KnowledgeNode
 
         # Get all nodes linked to the lessons
         nodes: List[KnowledgeNode] = (

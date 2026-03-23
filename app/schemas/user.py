@@ -1,10 +1,15 @@
-from pydantic import BaseModel, EmailStr
 from datetime import datetime
 from typing import Optional
-from app.models.user import UserRole
+
+from pydantic import EmailStr
+
+from app.schemas.base import APIModel
+from app.schemas.mixins.auditable import AuditableSchema
+from app.db.models.user import UserRole
+from app.schemas.mixins.soft_delete import SoftDeletableSchema
 
 
-class UserBase(BaseModel):
+class UserBase(APIModel):
     username: str
     email: EmailStr
     role: UserRole = UserRole.STUDENT
@@ -14,27 +19,26 @@ class UserCreate(UserBase):
     password: str
 
 
-class UserUpdate(BaseModel):
+class UserUpdate(APIModel, SoftDeletableSchema):
     username: Optional[str] = None
     email: Optional[EmailStr] = None
     role: Optional[UserRole] = None
-    is_active: Optional[bool] = None
 
 
-class UserResponse(UserBase):
+class UserResponse(UserBase, AuditableSchema, SoftDeletableSchema):
     id: int
     is_active: bool
-    created_at: datetime
-    updated_at: Optional[datetime] = None
-
-    class Config:
-        from_attributes = True
 
 
-class Token(BaseModel):
+class LoginRequest(APIModel):
+    username: str
+    password: str
+
+
+class Token(APIModel):
     access_token: str
     token_type: str
 
 
-class TokenData(BaseModel):
+class TokenData(APIModel):
     username: Optional[str] = None

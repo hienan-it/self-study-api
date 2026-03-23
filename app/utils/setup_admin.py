@@ -1,5 +1,4 @@
 from sqlalchemy.orm import Session
-from app.models.user import User, UserRole
 from app.config import settings
 from app.services.user_service import UserService
 

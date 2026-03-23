@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, Query, status
 from typing import List, Optional
-from app.models.user import User, UserRole
+from app.db.models.user import User, UserRole
 from app.schemas.module_lesson import ModuleResponse, ModuleCreate, ModuleUpdate, ModuleWithLessons
 from app.api.deps import get_current_active_user, get_admin_user, require_any_role
 from app.services.module_service import ModuleService, get_module_service

@@ -1,7 +1,8 @@
-from sqlalchemy import Column, Integer, String, Boolean, DateTime, Enum
-from sqlalchemy.sql import func
-from app.database import Base
+from sqlalchemy import Column, Integer, String
 import enum
+
+from app.db.models.base_model import BaseModel
+from app.utils.enum_as_string import EnumAsString
 
 
 class UserRole(str, enum.Enum):
@@ -10,17 +11,14 @@ class UserRole(str, enum.Enum):
     ADMIN = "admin"
 
 
-class User(Base):
+class User(BaseModel):
     __tablename__ = "users"
 
     id = Column(Integer, primary_key=True, index=True)
     username = Column(String(50), unique=True, index=True, nullable=False)
     email = Column(String(100), unique=True, index=True, nullable=False)
     hashed_password = Column(String(255), nullable=False)
-    role = Column(Enum(UserRole), default=UserRole.STUDENT, nullable=False)
-    is_active = Column(Boolean, default=True)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    role = Column(EnumAsString(UserRole), default=UserRole.STUDENT, nullable=False)
 
     def has_role(self, role: UserRole) -> bool:
         return self.role == role

@@ -2,10 +2,10 @@ from sqlalchemy import Column, Integer, ForeignKey, Float, DateTime
 from sqlalchemy.dialects.mysql import JSON
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
-from app.database import Base
+from app.db.models.base_model import BaseModel
 
 
-class StudySession(Base):
+class StudySession(BaseModel):
     """Study Session - Track user learning sessions"""
     __tablename__ = "study_sessions"
 
@@ -17,14 +17,14 @@ class StudySession(Base):
     completed_at = Column(DateTime(timezone=True), nullable=True)
 
     # Relationships
-    user = relationship("User", backref="study_sessions")
+    user = relationship("User", foreign_keys=[user_id], backref="study_sessions")
     practice_results = relationship("PracticeResult", back_populates="session", cascade="all, delete-orphan")
 
     def __repr__(self):
         return f"<StudySession(id={self.id}, user_id={self.user_id}, grade={self.grade})>"
 
 
-class PracticeResult(Base):
+class PracticeResult(BaseModel):
     """Practice Result - Results from practice/quiz"""
     __tablename__ = "practice_results"
 
@@ -35,7 +35,6 @@ class PracticeResult(Base):
     score = Column(Float, nullable=False)  # Percentage score
     time_spent = Column(Integer, nullable=False)  # Seconds
     answers = Column(JSON, nullable=True)  # Detailed answer data
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     # Relationships
     session = relationship("StudySession", back_populates="practice_results")
@@ -44,7 +43,7 @@ class PracticeResult(Base):
         return f"<PracticeResult(id={self.id}, score={self.score}%)>"
 
 
-class GeneratedMindmap(Base):
+class GeneratedMindmap(BaseModel):
     """Generated Mindmap - AI-generated mindmaps for users"""
     __tablename__ = "generated_mindmaps"
 
@@ -52,10 +51,9 @@ class GeneratedMindmap(Base):
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     root_node_id = Column(Integer, ForeignKey("knowledge_nodes.id", ondelete="CASCADE"), nullable=False)
     structure = Column(JSON, nullable=False)  # Tree structure of mindmap
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     # Relationships
-    user = relationship("User", backref="mindmaps")
+    user = relationship("User", foreign_keys=[user_id], backref="mindmaps")
     root_node = relationship("KnowledgeNode")
 
     def __repr__(self):

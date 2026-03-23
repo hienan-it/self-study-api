@@ -1,6 +1,6 @@
 from typing import List, Optional
 from pydantic import BaseModel, Field
-from app.models.knowledge import DifficultyLevel
+from app.db.models.knowledge import DifficultyLevel
 
 class MindmapGenerateRequest(BaseModel):
     lesson_ids: List[int] = Field(..., min_items=1, description="Danh sách lesson ID")

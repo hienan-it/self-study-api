@@ -1,8 +1,8 @@
-from sqlalchemy import Column, Integer, String, ForeignKey, Text, DateTime, Table
+from sqlalchemy import Column, Integer, String, ForeignKey, Text, Table
 from sqlalchemy.orm import relationship
-from sqlalchemy.sql import func
-from app.database import Base
 
+from app.db.base import Base
+from app.db.models.base_model import BaseModel
 
 # Association table for Lesson <-> KnowledgeNode (many-to-many)
 lesson_knowledge = Table(
@@ -14,7 +14,7 @@ lesson_knowledge = Table(
 )
 
 
-class Lesson(Base):
+class Lesson(BaseModel):
     """Lesson model - Individual learning unit"""
     __tablename__ = "lessons"
 
@@ -23,8 +23,6 @@ class Lesson(Base):
     name = Column(String(200), nullable=False)
     content = Column(Text, nullable=True)  # Rich text content
     display_order = Column(Integer, default=0)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
     # Relationships
     module = relationship("Module", back_populates="lessons")

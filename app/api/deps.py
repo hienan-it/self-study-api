@@ -2,8 +2,8 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 from typing import List
-from app.database import get_db
-from app.models.user import User, UserRole
+from app.db.session import get_db
+from app.db.models.user import User, UserRole
 from app.core.security import decode_access_token
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/auth/login")
@@ -35,7 +35,7 @@ async def get_current_active_user(
         current_user: User = Depends(get_current_user)
 ) -> User:
     """Check if current user is active"""
-    if not current_user.is_active:
+    if current_user.is_deleted:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Inactive user"

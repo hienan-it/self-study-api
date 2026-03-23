@@ -15,13 +15,12 @@ Tất cả đều yêu cầu authentication.
 from fastapi import APIRouter, Depends, Query, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List, Optional
-from pydantic import BaseModel, Field
 
-from app.models.user import User
-from app.models.knowledge import DifficultyLevel
-from app.models.session import GeneratedMindmap, StudySession
+from app.db.models.user import User
+from app.db.models.knowledge import DifficultyLevel
+from app.db.models.session import GeneratedMindmap, StudySession
 from app.api.deps import get_current_active_user
-from app.database import get_db
+from app.db.session import get_db
 from app.ai.llm_client import get_llm_client, LLMClient
 from app.ai.mindmap_generator import get_mindmap_generator
 from app.ai.exam_generator import get_exam_generator

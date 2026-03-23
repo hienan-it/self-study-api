@@ -1,80 +1,74 @@
 from datetime import datetime
 from typing import List, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import Field
 
-from app.models import DifficultyLevel
+from app.schemas.base import APIModel
+from app.schemas.mixins.auditable import AuditableSchema
+from app.db.models import DifficultyLevel
 
 
-class StudySessionCreate(BaseModel):
+class StudySessionCreate(APIModel):
     grade: int
-    selected_lessons: List[int]  # List of lesson IDs
+    selected_lessons: List[int]
 
 
-class StudySessionResponse(BaseModel):
+class StudySessionResponse(APIModel, AuditableSchema):
     id: int
     user_id: int
     grade: int
     selected_lessons: List[int]
-    created_at: Optional[datetime]
-    completed_at: Optional[datetime]
-
-    class Config:
-        from_attributes = True
+    completed_at: Optional[datetime] = None
 
 
-class AnswerItem(BaseModel):
+class AnswerItem(APIModel):
     question_id: int
     selected_answer: str
     is_correct: bool
     time_spent_seconds: int = 0
 
 
-class PracticeResultCreate(BaseModel):
+class PracticeResultCreate(APIModel):
     session_id: int
     total_questions: int
     correct_answers: int
     score: float = Field(ge=0.0, le=100.0)
-    time_spent: int  # seconds
+    time_spent: int
     answers: Optional[List[AnswerItem]] = None
 
 
-class PracticeResultResponse(BaseModel):
+class PracticeResultResponse(APIModel, AuditableSchema):
     id: int
     session_id: int
     total_questions: int
     correct_answers: int
     score: float
     time_spent: int
-    answers: Optional[list]
-    created_at: Optional[datetime]
-
-    class Config:
-        from_attributes = True
+    answers: Optional[List[AnswerItem]] = None
 
 
-class MasteryReport(BaseModel):
+class MasteryReport(APIModel):
     session_id: int
     total_questions: int
     correct_answers: int
     score: float
-    mastery_level: str  # "beginner" | "developing" | "proficient" | "mastered"
-    weak_node_ids: List[int]  # Nodes where user struggled
-    strong_node_ids: List[int]  # Nodes where user excelled
-    recommendations: List[str]  # Human-readable suggestions
+    mastery_level: str
+    weak_node_ids: List[int]
+    strong_node_ids: List[int]
+    recommendations: List[str]
 
 
-class QuestionSelectionRequest(BaseModel):
+class QuestionSelectionRequest(APIModel):
     lesson_ids: List[int]
     num_questions: int = Field(default=10, ge=1, le=50)
     difficulty: Optional[DifficultyLevel] = None
 
 
-class QuestionItem(BaseModel):
+class QuestionItem(APIModel):
     question_id: int
     knowledge_node_id: int
     knowledge_node_title: str
     question_type: str
     difficulty: str
     content: str
-    options: Optional[dict]
+    options: Optional[dict] = None

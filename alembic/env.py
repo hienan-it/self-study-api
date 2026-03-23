@@ -8,9 +8,11 @@ from os.path import abspath, dirname
 # Add parent directory to path
 sys.path.insert(0, dirname(dirname(abspath(__file__))))
 
-from app.database import Base
-import app.models
+from app.db.base import Base
+import app.db.models
 from app.config import settings
+
+print(Base.metadata.tables.keys())
 
 # this is the Alembic Config object
 config = context.config

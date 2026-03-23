@@ -1,13 +1,12 @@
 from sqlalchemy.orm import Session
-from sqlalchemy import func
 from typing import Optional, List
 from fastapi import HTTPException, status, Depends
-from app.models.subject import Subject
-from app.models.module import Module
-from app.models.lesson import Lesson
-from app.models.knowledge import KnowledgeNode
+from app.db.models.subject import Subject
+from app.db.models.module import Module
+from app.db.models.lesson import Lesson
+from app.db.models.knowledge import KnowledgeNode
 from app.schemas.subject import SubjectCreate, SubjectUpdate
-from app.database import get_db
+from app.db.session import get_db
 
 
 class SubjectService:
@@ -32,7 +31,7 @@ class SubjectService:
             self,
             skip: int = 0,
             limit: int = 100,
-            is_active: Optional[bool] = None,
+            is_deleted: Optional[bool] = None,
             search: Optional[str] = None
     ) -> List[Subject]:
         """
@@ -41,7 +40,7 @@ class SubjectService:
         Args:
             skip: Number of records to skip (pagination)
             limit: Maximum number of records to return
-            is_active: Filter by active status
+            is_deleted: Filter by active status
             search: Search in name and description
 
         Returns:
@@ -50,8 +49,8 @@ class SubjectService:
         query = self.db.query(Subject)
 
         # Apply filters
-        if is_active is not None:
-            query = query.filter(Subject.is_active == is_active)
+        if is_deleted is not None:
+            query = query.filter(Subject.is_deleted == is_deleted)
 
         if search:
             search_pattern = f"%{search}%"
@@ -147,7 +146,7 @@ class SubjectService:
         subject = Subject(
             name=subject_data.name,
             description=subject_data.description,
-            is_active=subject_data.is_active
+            is_active=subject_data.isActive
         )
 
         self.db.add(subject)

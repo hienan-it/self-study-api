@@ -5,22 +5,58 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="81777910-5c37-41d3-a883-dde6ae354888" name="Changes" comment="Update models and add lesson, module, subject api">
-      <change afterPath="$PROJECT_DIR$/app/ai/exam_generator.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/app/ai/graph_rag.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/app/ai/llm_client.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/app/ai/mindmap_generator.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/app/api/routes/ai.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/app/api/routes/knowledge.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/app/api/routes/sessions.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/app/schemas/ai.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/app/schemas/knowledge.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/app/schemas/session.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/app/services/knowledge_service.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/app/services/session_service.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/db/__init__.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/db/base.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/db/mixins/__init__.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/db/mixins/auditable_mixin.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/db/mixins/soft_delete_mixin.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/db/models/base_model.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/schemas/base.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/schemas/mixins/__init__.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/schemas/mixins/auditable.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/schemas/mixins/soft_delete.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/utils/enum_as_string.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.env.example" beforeDir="false" afterPath="$PROJECT_DIR$/.env.example" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/config.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/config.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/alembic/env.py" beforeDir="false" afterPath="$PROJECT_DIR$/alembic/env.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/alembic/versions/cde4314bdaf8_initial_tables.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/ai/exam_generator.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/ai/exam_generator.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/ai/graph_rag.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/ai/graph_rag.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/ai/mindmap_generator.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/ai/mindmap_generator.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/api/deps.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/api/deps.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/api/routes/ai.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/api/routes/ai.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/api/routes/auth.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/api/routes/auth.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/api/routes/knowledge.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/api/routes/knowledge.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/api/routes/lessons.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/api/routes/lessons.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/api/routes/modules.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/api/routes/modules.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/api/routes/sessions.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/api/routes/sessions.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/api/routes/subjects.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/api/routes/subjects.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/api/routes/users.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/api/routes/users.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/core/decorators.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/core/decorators.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/database.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/db/session.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/main.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/requirements.txt" beforeDir="false" afterPath="$PROJECT_DIR$/requirements.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/models/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/db/models/__init__.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/models/knowledge.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/db/models/knowledge.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/models/lesson.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/db/models/lesson.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/models/module.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/db/models/module.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/models/question.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/db/models/question.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/models/session.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/db/models/session.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/models/subject.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/db/models/subject.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/models/user.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/db/models/user.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/schemas/ai.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/schemas/ai.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/schemas/knowledge.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/schemas/knowledge.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/schemas/module_lesson.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/schemas/module_lesson.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/schemas/session.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/schemas/session.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/schemas/subject.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/schemas/subject.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/schemas/user.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/schemas/user.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/services/knowledge_service.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/services/knowledge_service.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/services/lesson_service.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/services/lesson_service.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/services/module_service.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/services/module_service.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/services/session_service.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/services/session_service.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/services/subject_service.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/services/subject_service.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/services/user_service.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/services/user_service.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/utils/setup_admin.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/utils/setup_admin.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/init_db.py" beforeDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -54,7 +90,7 @@
     &quot;FastAPI.FastAPIProject.executor&quot;: &quot;Run&quot;,
     &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
     &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
-    &quot;git-widget-placeholder&quot;: &quot;main&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;dev&quot;,
     &quot;ignore.virus.scanning.warn.message&quot;: &quot;true&quot;,
     &quot;last_opened_file_path&quot;: &quot;D:/IT-related/PycharmProjects/FastAPIProject/app/main.py&quot;,
     &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
@@ -62,7 +98,7 @@
     &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
     &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
     &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
-    &quot;settings.editor.selected.configurable&quot;: &quot;editor.preferences.fonts.default&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;Errors&quot;,
     &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
   },
   &quot;keyToStringList&quot;: {
@@ -77,11 +113,11 @@
       <recent name="E:\PycharmProjects\FastAPIProject\app\core" />
     </key>
     <key name="MoveFile.RECENT_KEYS">
+      <recent name="D:\IT-related\PycharmProjects\FastAPIProject\app\db" />
+      <recent name="D:\IT-related\PycharmProjects\FastAPIProject\app\models" />
       <recent name="D:\IT-related\PycharmProjects\FastAPIProject\app\schemas" />
       <recent name="D:\IT-related\PycharmProjects\FastAPIProject\alembic" />
       <recent name="D:\IT-related\PycharmProjects\FastAPIProject" />
-      <recent name="E:\PycharmProjects\FastAPIProject\app\routers\v1" />
-      <recent name="E:\PycharmProjects\FastAPIProject\app\core" />
     </key>
   </component>
   <component name="RunManager">
@@ -127,6 +163,7 @@
       <workItem from="1773068822132" duration="18055000" />
       <workItem from="1773419546982" duration="6243000" />
       <workItem from="1773441796143" duration="4790000" />
+      <workItem from="1773598007583" duration="43256000" />
     </task>
     <task id="LOCAL-00001" summary="Setup basic auth and user api">
       <option name="closed" value="true" />
@@ -175,6 +212,6 @@
     <option name="LAST_COMMIT_MESSAGE" value="Update models and add lesson, module, subject api" />
   </component>
   <component name="com.intellij.coverage.CoverageDataManagerImpl">
-    <SUITE FILE_PATH="coverage/FastAPIProject$FastAPIProject.coverage" NAME="FastAPIProject Coverage Results" MODIFIED="1773501952786" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="" />
+    <SUITE FILE_PATH="coverage/FastAPIProject$FastAPIProject.coverage" NAME="FastAPIProject Coverage Results" MODIFIED="1774198429622" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="" />
   </component>
 </project>

@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, Query, status
 from typing import List, Optional
-from app.models.user import User, UserRole
+from app.db.models.user import User, UserRole
 from app.schemas.subject import SubjectResponse, SubjectCreate, SubjectUpdate, SubjectWithStats
 from app.api.deps import get_current_active_user, get_admin_user, require_any_role
 from app.services.subject_service import SubjectService, get_subject_service
@@ -19,7 +19,7 @@ get_teacher_or_admin = require_any_role([UserRole.TEACHER, UserRole.ADMIN])
 async def list_subjects(
         skip: int = Query(0, ge=0, description="Number of records to skip"),
         limit: int = Query(100, ge=1, le=1000, description="Maximum records to return"),
-        is_active: Optional[bool] = Query(None, description="Filter by active status"),
+        is_deleted: Optional[bool] = Query(None, description="Filter by active status"),
         search: Optional[str] = Query(None, description="Search by name or description"),
         current_user: User = Depends(get_current_active_user),
         subject_service: SubjectService = Depends(get_subject_service)
@@ -32,7 +32,7 @@ async def list_subjects(
     return subject_service.get_all(
         skip=skip,
         limit=limit,
-        is_active=is_active,
+        is_deleted=is_deleted,
         search=search
     )
 

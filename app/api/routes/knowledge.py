@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, Query, status
 from typing import List, Optional
-from app.models.user import User, UserRole
-from app.models.knowledge import NodeType, DifficultyLevel
+from app.db.models.user import User, UserRole
+from app.db.models.knowledge import NodeType, DifficultyLevel
 from app.api.deps import get_current_active_user, get_admin_user, require_any_role
 from app.schemas.knowledge import KnowledgeNodeResponse, KnowledgeEdgeResponse, MindmapResponse
 from app.services.knowledge_service import (

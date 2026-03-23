@@ -1,9 +1,10 @@
-from sqlalchemy import Column, Integer, String, ForeignKey, Text, DateTime, Enum
+from sqlalchemy import Column, Integer, String, ForeignKey, Text
 from sqlalchemy.orm import relationship
-from sqlalchemy.sql import func
-from app.database import Base
-from app.models.lesson import lesson_knowledge
 import enum
+
+from app.db.models.base_model import BaseModel
+from app.db.models.lesson import lesson_knowledge
+from app.utils.enum_as_string import EnumAsString
 
 
 class NodeType(str, enum.Enum):
@@ -14,6 +15,7 @@ class NodeType(str, enum.Enum):
     EXAMPLE = "example"
     DEFINITION = "definition"
     PROCEDURE = "procedure"
+    FACT = "fact"
 
 
 class DifficultyLevel(str, enum.Enum):
@@ -32,7 +34,7 @@ class RelationType(str, enum.Enum):
     PART_OF = "part_of"  # A is part of B
 
 
-class KnowledgeNode(Base):
+class KnowledgeNode(BaseModel):
     """Knowledge Graph Node - Represents a knowledge concept"""
     __tablename__ = "knowledge_nodes"
 
@@ -43,11 +45,9 @@ class KnowledgeNode(Base):
     grade = Column(Integer, nullable=False)
     title = Column(String(200), nullable=False)
     description = Column(Text, nullable=True)
-    node_type = Column(Enum(NodeType), default=NodeType.CONCEPT, nullable=False)
-    difficulty_level = Column(Enum(DifficultyLevel), default=DifficultyLevel.BASIC, nullable=False)
+    node_type = Column(EnumAsString(NodeType), default=NodeType.CONCEPT, nullable=False)
+    difficulty_level = Column(EnumAsString(DifficultyLevel), default=DifficultyLevel.BASIC, nullable=False)
     importance_weight = Column(Integer, default=1)  # 1-10 scale
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
     # Relationships
     subject = relationship("Subject", back_populates="knowledge_nodes")
@@ -74,15 +74,14 @@ class KnowledgeNode(Base):
         return f"<KnowledgeNode(id={self.id}, title={self.title}, type={self.node_type})>"
 
 
-class KnowledgeEdge(Base):
+class KnowledgeEdge(BaseModel):
     """Knowledge Graph Edge - Represents relationship between nodes"""
     __tablename__ = "knowledge_edges"
 
     id = Column(Integer, primary_key=True, index=True)
     from_node_id = Column(Integer, ForeignKey("knowledge_nodes.id", ondelete="CASCADE"), nullable=False)
     to_node_id = Column(Integer, ForeignKey("knowledge_nodes.id", ondelete="CASCADE"), nullable=False)
-    relation_type = Column(Enum(RelationType), nullable=False)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    relation_type = Column(EnumAsString(RelationType), nullable=False)
 
     # Relationships
     from_node = relationship("KnowledgeNode", foreign_keys=[from_node_id], back_populates="outgoing_edges")

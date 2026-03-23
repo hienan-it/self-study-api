@@ -2,10 +2,10 @@ from sqlalchemy.orm import Session
 from sqlalchemy import or_
 from typing import Optional, List
 from fastapi import HTTPException, status, Depends
-from app.models.user import User, UserRole
+from app.db.models.user import User, UserRole
 from app.schemas.user import UserCreate, UserUpdate
 from app.core.security import get_password_hash, verify_password
-from app.database import get_db
+from app.db.session import get_db
 
 
 class UserService:
@@ -30,12 +30,74 @@ class UserService:
         """Get user by email"""
         return self.db.query(User).filter(User.email == email).first()
 
+    def page(
+            self,
+            page: int = 1,
+            page_size: int = 10,
+            sort_by: str = None,
+            sort_order: str = None,
+            role: Optional[UserRole] = None,
+            is_deleted: Optional[bool] = None,
+            search: Optional[str] = None
+    ) -> List[User]:
+        """
+        Get all users with optional filters
+
+        Args:
+            page:
+            page_size:
+            sort_by:
+            sort_order:
+            role: Filter by user role
+            is_deleted: Filter by active status
+            search: Search in username and email
+
+        Returns:
+            Page of users matching the criteria
+        """
+        query = self.db.query(User)
+
+        # Apply filters
+        if role is not None:
+            query = query.filter(User.role == role)
+
+        if is_deleted is not None:
+            query = query.filter(User.is_deleted == is_deleted)
+
+        if search:
+            search_pattern = f"%{search}%"
+            query = query.filter(
+                or_(
+                    User.username.ilike(search_pattern),
+                    User.email.ilike(search_pattern)
+                ))
+
+        total = query.count()
+
+        # Calculate offset
+        offset = (page - 1) * page_size
+
+        users = (
+            query.order_by(User.created_at.desc())
+            .offset(offset)
+            .limit(page_size)
+            .all()
+        )
+
+        return {
+            "data": users,
+            "page": page,
+            "page_size": page_size,
+            "total": total,
+            "total_pages": (total + page_size - 1) // page_size
+        }
+
     def get_all(
             self,
             skip: int = 0,
             limit: int = 100,
             role: Optional[UserRole] = None,
-            is_active: Optional[bool] = None,
+            is_deleted: Optional[bool] = None,
             search: Optional[str] = None
     ) -> List[User]:
         """
@@ -45,7 +107,7 @@ class UserService:
             skip: Number of records to skip (pagination)
             limit: Maximum number of records to return
             role: Filter by user role
-            is_active: Filter by active status
+            is_deleted: Filter by active status
             search: Search in username and email
 
         Returns:
@@ -57,8 +119,8 @@ class UserService:
         if role is not None:
             query = query.filter(User.role == role)
 
-        if is_active is not None:
-            query = query.filter(User.is_active == is_active)
+        if is_deleted is not None:
+            query = query.filter(User.is_deleted == is_deleted)
 
         if search:
             search_pattern = f"%{search}%"
@@ -75,14 +137,14 @@ class UserService:
     def count_users(
             self,
             role: Optional[UserRole] = None,
-            is_active: Optional[bool] = None
+            is_deleted: Optional[bool] = None
     ) -> dict:
         """
         Get user count statistics
 
         Args:
             role: Filter by role
-            is_active: Filter by active status
+            is_deleted: Filter by active status
 
         Returns:
             Dictionary with total count and breakdown by role
@@ -92,8 +154,8 @@ class UserService:
         if role is not None:
             query = query.filter(User.role == role)
 
-        if is_active is not None:
-            query = query.filter(User.is_active == is_active)
+        if is_deleted is not None:
+            query = query.filter(User.is_deleted == is_deleted)
 
         total = query.count()
 
@@ -105,8 +167,8 @@ class UserService:
                 "admins": self.db.query(User).filter(User.role == UserRole.ADMIN).count(),
             },
             "by_status": {
-                "active": self.db.query(User).filter(User.is_active == True).count(),
-                "inactive": self.db.query(User).filter(User.is_active == False).count(),
+                "active": self.db.query(User).filter(User.is_deleted == False).count(),
+                "inactive": self.db.query(User).filter(User.is_deleted == True).count(),
             }
         }
 
@@ -179,7 +241,7 @@ class UserService:
             email=user_data.email,
             hashed_password=get_password_hash(user_data.password),
             role=user_data.role,
-            is_active=True
+            is_deleted=False
         )
 
         self.db.add(user)
@@ -209,7 +271,7 @@ class UserService:
             email=email,
             hashed_password=get_password_hash(password),
             role=UserRole.ADMIN,
-            is_active=True
+            is_deleted=False
         )
 
         self.db.add(user)
@@ -326,7 +388,7 @@ class UserService:
                 detail="Cannot deactivate yourself"
             )
 
-        user.is_active = False
+        user.is_deleted = True
         self.db.commit()
         self.db.refresh(user)
 
@@ -352,7 +414,7 @@ class UserService:
                 detail=f"User with id {user_id} not found"
             )
 
-        user.is_active = True
+        user.is_deleted = False
         self.db.commit()
         self.db.refresh(user)
 
@@ -425,7 +487,7 @@ class UserService:
 
     def is_active(self, user: User) -> bool:
         """Check if user is active"""
-        return user.is_active
+        return not user.is_deleted
 
     def has_role(self, user: User, role: UserRole) -> bool:
         """Check if user has specific role"""

@@ -1,10 +1,10 @@
 from sqlalchemy.orm import Session
 from typing import Optional, List
 from fastapi import HTTPException, status, Depends
-from app.models.lesson import Lesson
-from app.models.module import Module
+from app.db.models.lesson import Lesson
+from app.db.models.module import Module
 from app.schemas.module_lesson import LessonCreate, LessonUpdate
-from app.database import get_db
+from app.db.session import get_db
 
 
 class LessonService:

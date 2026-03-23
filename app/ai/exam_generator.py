@@ -29,8 +29,8 @@ from dataclasses import dataclass
 
 from app.ai.llm_client import LLMClient, get_llm_client
 from app.ai.graph_rag import GraphContext, GraphContextSerializer, SubgraphExtractor
-from app.models.knowledge import KnowledgeNode, DifficultyLevel, NodeType
-from app.models.lesson import lesson_knowledge
+from app.db.models.knowledge import KnowledgeNode, DifficultyLevel, NodeType
+from app.db.models.lesson import lesson_knowledge
 
 logger = logging.getLogger(__name__)
 
@@ -416,7 +416,7 @@ class ExamGenerator:
         Returns:
             ExamResult chứa tất cả câu hỏi và báo cáo coverage
         """
-        from app.models.knowledge import KnowledgeNode, KnowledgeEdge
+        from app.db.models.knowledge import KnowledgeNode, KnowledgeEdge
         from sqlalchemy import or_
 
         # ---- Bước 1: Query nodes từ lessons ----

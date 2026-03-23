@@ -24,9 +24,9 @@ from sqlalchemy.orm import Session as DBSession
 
 from app.ai.llm_client import LLMClient, get_llm_client
 from app.ai.graph_rag import GraphContext, GraphContextSerializer, SubgraphExtractor
-from app.models.knowledge import KnowledgeNode, KnowledgeEdge, DifficultyLevel
-from app.models.session import GeneratedMindmap
-from app.models.lesson import lesson_knowledge
+from app.db.models.knowledge import KnowledgeNode, KnowledgeEdge, DifficultyLevel
+from app.db.models.session import GeneratedMindmap
+from app.db.models.lesson import lesson_knowledge
 
 logger = logging.getLogger(__name__)
 
@@ -281,7 +281,7 @@ class MindmapGenerator:
             GeneratedMindmap đã được lưu vào database
         """
         # ---- Bước 1: Query nodes từ lessons ----
-        from app.models.knowledge import KnowledgeNode, KnowledgeEdge
+        from app.db.models.knowledge import KnowledgeNode, KnowledgeEdge
         from sqlalchemy import or_
 
         seed_nodes: List[KnowledgeNode] = (

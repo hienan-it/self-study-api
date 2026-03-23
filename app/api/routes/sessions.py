@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, Query, status
 from typing import List, Optional
-from app.models.user import User, UserRole
-from app.models.knowledge import DifficultyLevel
+from app.db.models.user import User
+from app.db.models.knowledge import DifficultyLevel
 from app.api.deps import get_current_active_user, get_admin_user
 from app.schemas.session import StudySessionResponse, PracticeResultResponse
 from app.services.session_service import (

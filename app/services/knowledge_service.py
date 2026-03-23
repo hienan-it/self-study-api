@@ -4,8 +4,8 @@ from typing import Optional, List, Set, Dict
 from fastapi import Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
-from app.database import get_db
-from app.models import KnowledgeNode, NodeType, DifficultyLevel, KnowledgeEdge, lesson_knowledge, GeneratedMindmap, \
+from app.db.session import get_db
+from app.db.models import KnowledgeNode, NodeType, DifficultyLevel, KnowledgeEdge, lesson_knowledge, GeneratedMindmap, \
     Lesson
 from app.schemas.knowledge import KnowledgeNodeCreate, KnowledgeNodeUpdate, KnowledgeEdgeCreate, SubgraphResponse
 

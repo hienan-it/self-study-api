@@ -1,9 +1,11 @@
+from alembic import command
+from alembic.config import Config
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from app.api.routes import auth, users, lessons, modules, subjects, knowledge, sessions
 from app.api.routes.ai import router as ai_router
-from app.database import SessionLocal
+from app.db.session import SessionLocal
 from app.utils.setup_admin import create_initial_admin
 
 
@@ -21,6 +23,15 @@ async def lifespan(app: FastAPI):
     # ============================================
     # STARTUP LOGIC
     # ============================================
+    # Run migrations automatically
+    try:
+        alembic_cfg = Config("alembic.ini")
+        command.upgrade(alembic_cfg, "head")
+        print("✅ Database migrations applied successfully")
+    except Exception as e:
+        # logger.error(f"❌ Failed to apply database migrations: {e}")
+        raise
+
     print("=" * 50)
     print("🚀 Starting Educational Platform API...")
     print("=" * 50)
