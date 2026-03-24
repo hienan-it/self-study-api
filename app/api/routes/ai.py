@@ -1,20 +1,22 @@
 """
-app/api/routes/ai_routes.py
+app/api/routes/ai.py
 
-AI Routes — endpoints cho Mindmap Generation và Exam Generation.
+AI Routes — Mindmap Generation và Exam Generation.
 
 Endpoints:
   POST /ai/mindmap          → Sinh mindmap từ session
+  GET  /ai/mindmap/me       → Danh sách mindmaps của user
   GET  /ai/mindmap/{id}     → Lấy mindmap đã sinh
-  POST /ai/exam             → Sinh đề thi từ session
-  POST /ai/exam/preview     → Preview đề thi không lưu DB
+  DELETE /ai/mindmap/{id}   → Xoá mindmap
+  POST /ai/exam             → Sinh đề thi từ lessons (Bloom's Taxonomy)
+  POST /ai/exam/session/{id}→ Sinh đề thi từ session có sẵn
 
 Tất cả đều yêu cầu authentication.
 """
 
 from fastapi import APIRouter, Depends, Query, HTTPException, status
 from sqlalchemy.orm import Session
-from typing import List, Optional
+from typing import Optional
 
 from app.db.models.user import User
 from app.db.models.knowledge import DifficultyLevel
@@ -24,16 +26,25 @@ from app.db.session import get_db
 from app.ai.llm_client import get_llm_client, LLMClient
 from app.ai.mindmap_generator import get_mindmap_generator
 from app.ai.exam_generator import get_exam_generator
-from app.schemas.ai import MindmapResponse, MindmapGenerateRequest, ExamResponse, ExamGenerateRequest, \
-    ExamQuestionResponse
+from app.schemas.ai import (
+    MindmapResponse,
+    MindmapGenerateRequest,
+    ExamResponse,
+    ExamGenerateRequest,
+    ExamQuestionResponse,
+)
+from app.core.responses import success_response
+from app.core.exceptions import ResourceNotFoundException, ForbiddenException
 
 router = APIRouter(prefix="/ai", tags=["ai"])
+
 
 # ============================================
 # MINDMAP ENDPOINTS
 # ============================================
 
-@router.post("/mindmap", response_model=MindmapResponse, status_code=status.HTTP_201_CREATED)
+
+@router.post("/mindmap", response_model=None, status_code=status.HTTP_201_CREATED)
 async def generate_mindmap(
     request: MindmapGenerateRequest,
     current_user: User = Depends(get_current_active_user),
@@ -63,18 +74,20 @@ async def generate_mindmap(
             difficulty_filter=request.difficulty_filter,
             enrich_with_llm=request.enrich_with_llm,
         )
-        return mindmap
+        return success_response(
+            MindmapResponse.model_validate(mindmap).model_dump(by_alias=True)
+        )
 
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Lỗi khi sinh mindmap: {str(e)}"
+            detail=f"Lỗi khi sinh mindmap: {str(e)}",
         )
 
 
-@router.get("/mindmap/me", response_model=List[MindmapResponse])
+@router.get("/mindmap/me", response_model=None)
 async def my_mindmaps(
     skip: int = Query(0, ge=0),
     limit: int = Query(20, ge=1, le=100),
@@ -90,22 +103,28 @@ async def my_mindmaps(
         .limit(limit)
         .all()
     )
-    return mindmaps
+    return success_response(
+        [MindmapResponse.model_validate(m).model_dump(by_alias=True) for m in mindmaps]
+    )
 
 
-@router.get("/mindmap/{mindmap_id}", response_model=MindmapResponse)
+@router.get("/mindmap/{mindmap_id}", response_model=None)
 async def get_mindmap(
     mindmap_id: int,
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_db),
 ):
     """Lấy mindmap theo ID."""
-    mindmap = db.query(GeneratedMindmap).filter(GeneratedMindmap.id == mindmap_id).first()
+    mindmap = (
+        db.query(GeneratedMindmap).filter(GeneratedMindmap.id == mindmap_id).first()
+    )
     if not mindmap:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Mindmap không tìm thấy")
+        raise ResourceNotFoundException("GeneratedMindmap", mindmap_id)
     if mindmap.user_id != current_user.id:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Không có quyền truy cập")
-    return mindmap
+        raise ForbiddenException("Không có quyền truy cập")
+    return success_response(
+        MindmapResponse.model_validate(mindmap).model_dump(by_alias=True)
+    )
 
 
 @router.delete("/mindmap/{mindmap_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -115,20 +134,24 @@ async def delete_mindmap(
     db: Session = Depends(get_db),
 ):
     """Xoá mindmap."""
-    mindmap = db.query(GeneratedMindmap).filter(GeneratedMindmap.id == mindmap_id).first()
+    mindmap = (
+        db.query(GeneratedMindmap).filter(GeneratedMindmap.id == mindmap_id).first()
+    )
     if not mindmap:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Mindmap không tìm thấy")
+        raise ResourceNotFoundException("GeneratedMindmap", mindmap_id)
     if mindmap.user_id != current_user.id:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Không có quyền truy cập")
+        raise ForbiddenException("Không có quyền truy cập")
     db.delete(mindmap)
     db.commit()
+    return None
 
 
 # ============================================
 # EXAM ENDPOINTS
 # ============================================
 
-@router.post("/exam", response_model=ExamResponse, status_code=status.HTTP_201_CREATED)
+
+@router.post("/exam", response_model=None, status_code=status.HTTP_201_CREATED)
 async def generate_exam(
     request: ExamGenerateRequest,
     current_user: User = Depends(get_current_active_user),
@@ -146,9 +169,9 @@ async def generate_exam(
     5. Trả về đề thi kèm đáp án và giải thích
 
     **Bloom's Taxonomy mapping**:
-    - basic → Remember (Nhớ)
-    - intermediate → Understand (Hiểu)
-    - advanced → Apply/Analyze (Áp dụng/Phân tích)
+    - basic       → Remember (Nhớ)
+    - intermediate→ Understand (Hiểu)
+    - advanced    → Apply/Analyze (Áp dụng/Phân tích)
 
     **Thời gian**: ~10–30 giây tùy số câu hỏi
     """
@@ -163,7 +186,7 @@ async def generate_exam(
             max_depth=request.max_depth,
         )
 
-        return ExamResponse(
+        exam = ExamResponse(
             total_questions=result.total_questions,
             nodes_covered=result.nodes_covered,
             nodes_total=result.nodes_total,
@@ -181,19 +204,20 @@ async def generate_exam(
                     explanation=q.explanation,
                 )
                 for q in result.questions
-            ]
+            ],
         )
+        return success_response(exam.model_dump(by_alias=True))
 
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Lỗi khi sinh đề thi: {str(e)}"
+            detail=f"Lỗi khi sinh đề thi: {str(e)}",
         )
 
 
-@router.post("/exam/session/{session_id}", response_model=ExamResponse)
+@router.post("/exam/session/{session_id}", response_model=None)
 async def generate_exam_for_session(
     session_id: int,
     total_questions: int = Query(default=10, ge=3, le=30),
@@ -203,15 +227,12 @@ async def generate_exam_for_session(
     db: Session = Depends(get_db),
     llm_client: LLMClient = Depends(get_llm_client),
 ):
-    """
-    Sinh đề thi tự động từ một study session có sẵn.
-    Dùng lesson_ids đã được lưu trong session.
-    """
+    """Sinh đề thi tự động từ một study session có sẵn."""
     session = db.query(StudySession).filter(StudySession.id == session_id).first()
     if not session:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Session không tìm thấy")
+        raise ResourceNotFoundException("StudySession", session_id)
     if session.user_id != current_user.id:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Không có quyền truy cập")
+        raise ForbiddenException("Không có quyền truy cập")
 
     try:
         generator = get_exam_generator(db, llm_client)
@@ -222,21 +243,19 @@ async def generate_exam_for_session(
             difficulty_filter=difficulty_filter,
         )
 
-        return ExamResponse(
+        exam = ExamResponse(
             total_questions=result.total_questions,
             nodes_covered=result.nodes_covered,
             nodes_total=result.nodes_total,
             coverage_report=result.coverage_report,
-            questions=[
-                ExamQuestionResponse(**vars(q))
-                for q in result.questions
-            ]
+            questions=[ExamQuestionResponse(**vars(q)) for q in result.questions],
         )
+        return success_response(exam.model_dump(by_alias=True))
 
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Lỗi khi sinh đề thi: {str(e)}"
+            detail=f"Lỗi khi sinh đề thi: {str(e)}",
         )

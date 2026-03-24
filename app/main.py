@@ -7,6 +7,7 @@ from app.api.routes import auth, users, lessons, modules, subjects, knowledge, s
 from app.api.routes.ai import router as ai_router
 from app.db.session import SessionLocal
 from app.utils.setup_admin import create_initial_admin
+from app.core.exceptions import register_exception_handlers
 
 
 @asynccontextmanager
@@ -28,7 +29,7 @@ async def lifespan(app: FastAPI):
         alembic_cfg = Config("alembic.ini")
         command.upgrade(alembic_cfg, "head")
         print("✅ Database migrations applied successfully")
-    except Exception as e:
+    except Exception:
         # logger.error(f"❌ Failed to apply database migrations: {e}")
         raise
 
@@ -70,8 +71,11 @@ app = FastAPI(
     lifespan=lifespan,
     docs_url="/docs",
     redoc_url="/redoc",
-    openapi_url="/openapi.json"
+    openapi_url="/openapi.json",
+    redirect_slashes=False
 )
+
+register_exception_handlers(app)
 
 # ============================================
 # MIDDLEWARE
@@ -89,19 +93,20 @@ app.add_middleware(
 # ROUTERS
 # ============================================
 
-app.include_router(auth.router, prefix="/api")
-app.include_router(users.router, prefix="/api")
-app.include_router(lessons.router, prefix="/api")
-app.include_router(modules.router, prefix="/api")
-app.include_router(subjects.router, prefix="/api")
-app.include_router(knowledge.router, prefix="/api")
-app.include_router(sessions.router, prefix="/api")
-app.include_router(ai_router, prefix="/api")
+app.include_router(auth.router, prefix="/api/v1")
+app.include_router(users.router, prefix="/api/v1")
+app.include_router(lessons.router, prefix="/api/v1")
+app.include_router(modules.router, prefix="/api/v1")
+app.include_router(subjects.router, prefix="/api/v1")
+app.include_router(knowledge.router, prefix="/api/v1")
+app.include_router(sessions.router, prefix="/api/v1")
+app.include_router(ai_router, prefix="/api/v1")
 
 
 # ============================================
 # ROOT ENDPOINTS
 # ============================================
+
 
 @app.get("/")
 def read_root():
@@ -111,7 +116,7 @@ def read_root():
         "version": "1.0.0",
         "status": "running",
         "docs": "/docs",
-        "redoc": "/redoc"
+        "redoc": "/redoc",
     }
 
 
@@ -121,7 +126,7 @@ def health_check():
     return {
         "status": "healthy",
         "service": "Educational Platform API",
-        "version": "1.0.0"
+        "version": "1.0.0",
     }
 
 
@@ -133,9 +138,5 @@ if __name__ == "__main__":
     import uvicorn
 
     uvicorn.run(
-        "app.main:app",
-        host="0.0.0.0",
-        port=8000,
-        reload=True,
-        log_level="info"
+        "app.main:app", host="0.0.0.0", port=8000, reload=True, log_level="info"
     )
