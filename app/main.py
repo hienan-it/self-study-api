@@ -34,7 +34,7 @@ async def lifespan(app: FastAPI):
         raise
 
     print("=" * 50)
-    print("🚀 Starting Educational Platform API...")
+    print("🚀 Starting Study Master API...")
     print("=" * 50)
 
     # Create initial admin user
@@ -56,7 +56,7 @@ async def lifespan(app: FastAPI):
     # SHUTDOWN LOGIC
     # ============================================
     print("=" * 50)
-    print("🛑 Shutting down Educational Platform API...")
+    print("🛑 Shutting down Study Master API...")
     print("=" * 50)
 
 
@@ -65,8 +65,8 @@ async def lifespan(app: FastAPI):
 # ============================================
 
 app = FastAPI(
-    title="Educational Platform API",
-    description="API for educational platform with AI-powered features",
+    title="Study Master API",
+    description="API for Study Master platform with AI-powered features",
     version="1.0.0",
     lifespan=lifespan,
     docs_url="/docs",
@@ -112,7 +112,7 @@ app.include_router(ai_router, prefix="/api/v1")
 def read_root():
     """Root endpoint - API information"""
     return {
-        "message": "Educational Platform API",
+        "message": "Study Master API",
         "version": "1.0.0",
         "status": "running",
         "docs": "/docs",
@@ -125,7 +125,7 @@ def health_check():
     """Health check endpoint"""
     return {
         "status": "healthy",
-        "service": "Educational Platform API",
+        "service": "Study Master API",
         "version": "1.0.0",
     }
 
