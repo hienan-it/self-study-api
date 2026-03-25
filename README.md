@@ -72,7 +72,7 @@ An AI-powered backend for the Study Master platform. Built with **FastAPI** for 
 
 **Development Mode (Auto-reload):**
 ```bash
-uvicorn app.main:app --reload --port 8000
+uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
 **Access Documentation:**
