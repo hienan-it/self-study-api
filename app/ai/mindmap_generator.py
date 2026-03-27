@@ -320,6 +320,8 @@ class MindmapGenerator:
             .all()
         )
         node_lookup = {n.id: n for n in all_nodes}
+        for n in seed_nodes:
+            node_lookup.setdefault(n.id, n)
 
         # ---- Bước 2: BFS Subgraph Extraction ----
         ctx = self.extractor.extract_for_lessons(

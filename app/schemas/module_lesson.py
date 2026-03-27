@@ -34,11 +34,6 @@ class ModuleResponse(ModuleBase, AuditableSchema):
     id: int
 
 
-class ModuleWithLessons(ModuleResponse):
-    """Module with lesson count"""
-    lesson_count: int = 0
-
-
 # ============================================
 # LESSON SCHEMAS
 # ============================================
@@ -47,6 +42,7 @@ class LessonBase(APIModel):
     module_id: int
     name: str = Field(..., min_length=1, max_length=200)
     content: Optional[str] = None
+    duration_mins: Optional[int] = None
     display_order: int = 0
 
 
@@ -63,8 +59,16 @@ class LessonUpdate(APIModel):
 
 class LessonResponse(LessonBase, AuditableSchema):
     id: int
+    node_count: int = 0
+    completed: bool = False
 
 
 class LessonWithKnowledge(LessonResponse):
     """Lesson with knowledge node info"""
-    knowledge_node_count: int = 0
+    pass
+
+
+class ModuleWithLessons(ModuleResponse):
+    """Module with full lessons list"""
+    lessons: list[LessonResponse] = []
+    completed: bool = False

@@ -56,6 +56,56 @@ class LessonService:
         # Order by display_order, then name
         return query.order_by(Lesson.display_order, Lesson.name).offset(skip).limit(limit).all()
 
+    def page(
+            self,
+            page: int = 1,
+            page_size: int = 20,
+            module_id: Optional[int] = None,
+            search: Optional[str] = None
+    ) -> dict:
+        """
+        Get lessons with standardized pagination
+
+        Args:
+            page: Page number (1-indexed)
+            page_size: Number of records per page
+            module_id: Filter by module
+            search: Search in name and content
+
+        Returns:
+            Dictionary with data and pagination metadata
+        """
+        query = self.db.query(Lesson)
+
+        # Apply filters
+        if module_id is not None:
+            query = query.filter(Lesson.module_id == module_id)
+
+        if search:
+            search_pattern = f"%{search}%"
+            query = query.filter(
+                (Lesson.name.ilike(search_pattern)) |
+                (Lesson.content.ilike(search_pattern))
+            )
+
+        total = query.count()
+        offset = (page - 1) * page_size
+
+        lessons = (
+            query.order_by(Lesson.display_order, Lesson.name)
+            .offset(offset)
+            .limit(page_size)
+            .all()
+        )
+
+        return {
+            "data": lessons,
+            "page": page,
+            "page_size": page_size,
+            "total": total,
+            "total_pages": (total + page_size - 1) // page_size if total > 0 else 0
+        }
+
     def get_by_module(self, module_id: int) -> List[Lesson]:
         """Get all lessons for a module"""
         return self.db.query(Lesson).filter(

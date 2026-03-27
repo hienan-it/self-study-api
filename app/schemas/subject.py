@@ -5,6 +5,9 @@ from app.schemas.base import APIModel
 from app.schemas.mixins.auditable import AuditableSchema
 
 
+from app.schemas.mixins.soft_delete import SoftDeletableSchema
+
+
 class SubjectBase(APIModel):
     name: str = Field(..., min_length=1, max_length=100)
     description: Optional[str] = None
@@ -14,12 +17,12 @@ class SubjectCreate(SubjectBase):
     pass
 
 
-class SubjectUpdate(APIModel):
+class SubjectUpdate(APIModel, SoftDeletableSchema):
     name: Optional[str] = Field(None, min_length=1, max_length=100)
     description: Optional[str] = None
 
 
-class SubjectResponse(SubjectBase, AuditableSchema):
+class SubjectResponse(SubjectBase, AuditableSchema, SoftDeletableSchema):
     id: int
 
 

@@ -34,8 +34,8 @@ async def update_current_user(
     if user_update.role is not None and current_user.role != UserRole.ADMIN:
         user_update.role = None  # Ignore role change for non-admins
 
-    if user_update.isActive is not None:
-        user_update.isActive = None  # Users cannot deactivate themselves here
+    if user_update.is_deleted is not None:
+        user_update.is_deleted = None  # Users cannot deactivate themselves here
 
     updated = user_service.update(current_user.id, user_update)
     return success_response(
@@ -48,7 +48,7 @@ async def update_current_user(
 # ============================================
 
 
-@router.get("/", response_model=None)
+@router.get("", response_model=None)
 async def list_users(
     skip: int = Query(0, ge=0, description="Number of records to skip"),
     limit: int = Query(100, ge=1, le=1000, description="Maximum records to return"),
@@ -70,7 +70,7 @@ async def list_users(
     return success_response(data)
 
 
-@router.get("/page/", response_model=None)
+@router.get("/page", response_model=None)
 async def page_users(
     page: int = Query(0, ge=0, description="Page number (0-indexed)"),
     page_size: int = Query(20, ge=1, le=100, description="Page size (max 100)"),
@@ -89,14 +89,14 @@ async def page_users(
         page=page, page_size=page_size, role=role, is_deleted=is_deleted, search=search
     )
     content = [
-        UserResponse.model_validate(u).model_dump(by_alias=True) for u in result.content
+        UserResponse.model_validate(u).model_dump(by_alias=True) for u in result["data"]
     ]
     return paginated_response(
         content=content,
-        page=result.page,
-        size=result.size,
-        total_elements=result.total_elements,
-        total_pages=result.total_pages,
+        page=page,
+        size=result["page_size"],
+        total_elements=result["total"],
+        total_pages=result["total_pages"],
     )
 
 
@@ -137,7 +137,7 @@ async def get_user(
 # ============================================
 
 
-@router.post("/", response_model=None, status_code=201)
+@router.post("", response_model=None, status_code=201)
 async def create_user(
     user_data: UserCreate,
     current_user: User = Depends(get_admin_user),
@@ -165,7 +165,7 @@ async def update_user(
     Requires: Admin role
     """
     # Prevent admin from deactivating themselves
-    if user_id == current_user.id and user_update.isActive is False:
+    if user_id == current_user.id and user_update.is_deleted is True:
         raise BusinessRuleException("Cannot deactivate yourself")
 
     updated = user_service.update(user_id, user_update)

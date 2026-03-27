@@ -485,10 +485,6 @@ class UserService:
 
         return user
 
-    def is_active(self, user: User) -> bool:
-        """Check if user is active"""
-        return not user.is_deleted
-
     def has_role(self, user: User, role: UserRole) -> bool:
         """Check if user has specific role"""
         return user.role == role

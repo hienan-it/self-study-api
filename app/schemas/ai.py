@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import List, Optional
 from pydantic import BaseModel, Field
 from app.db.models.knowledge import DifficultyLevel
@@ -16,7 +17,7 @@ class MindmapResponse(BaseModel):
     user_id: int
     root_node_id: int
     structure: dict
-    created_at: Optional[str]
+    created_at: datetime
 
     class Config:
         from_attributes = True

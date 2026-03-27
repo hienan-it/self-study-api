@@ -17,7 +17,10 @@ from datetime import datetime, timezone
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
+import logging
+import traceback
 
+error_logger = logging.getLogger("error_logger")
 
 # ============================================
 # DOMAIN EXCEPTIONS
@@ -115,6 +118,10 @@ _STATUS_TO_CODE: dict[int, str] = {
 # ============================================
 
 async def app_exception_handler(request: Request, exc: AppException) -> JSONResponse:
+    error_logger.warning(
+        f"AppException: {exc.message}",
+        extra={"action_code": exc.code}
+    )
     return JSONResponse(
         status_code=exc.status_code,
         content=_error_body(exc.code, exc.message, str(request.url.path)),
@@ -123,6 +130,10 @@ async def app_exception_handler(request: Request, exc: AppException) -> JSONResp
 
 async def http_exception_handler(request: Request, exc: HTTPException) -> JSONResponse:
     code = _STATUS_TO_CODE.get(exc.status_code, "INTERNAL_ERROR")
+    error_logger.warning(
+        f"HTTPException: {exc.detail}",
+        extra={"action_code": code}
+    )
     return JSONResponse(
         status_code=exc.status_code,
         content=_error_body(code, str(exc.detail), str(request.url.path)),
@@ -136,12 +147,20 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
     ]
     body = _error_body("VALIDATION_FAILED", "Request validation failed", str(request.url.path))
     body["errors"] = errors  # type: ignore[assignment]
+    error_logger.warning(
+        f"Validation failed: {errors}",
+        extra={"action_code": "VALIDATION_FAILED"}
+    )
     return JSONResponse(status_code=422, content=body)
 
 
 async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONResponse:
-    print("🔥 UNHANDLED ERROR:", repr(exc))
     traceback.print_exc()
+    error_logger.error(
+        "An unexpected error occurred",
+        exc_info=True,
+        extra={"action_code": "INTERNAL_SERVER_ERROR"}
+    )
     return JSONResponse(
         status_code=500,
         content=_error_body("INTERNAL_ERROR", "An unexpected error occurred", str(request.url.path)),

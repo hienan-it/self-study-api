@@ -7,7 +7,7 @@ from app.schemas.module_lesson import (
     LessonUpdate,
     LessonWithKnowledge,
 )
-from app.core.responses import success_response
+from app.core.responses import success_response, paginated_response
 from app.core.exceptions import ResourceNotFoundException
 from app.api.deps import get_current_active_user, get_admin_user, require_any_role
 from app.services.lesson_service import LessonService, get_lesson_service
@@ -22,7 +22,7 @@ get_teacher_or_admin = require_any_role([UserRole.TEACHER, UserRole.ADMIN])
 # ============================================
 
 
-@router.get("/", response_model=None)
+@router.get("", response_model=None)
 async def list_lessons(
     skip: int = Query(0, ge=0, description="Number of records to skip"),
     limit: int = Query(100, ge=1, le=1000, description="Maximum records to return"),
@@ -33,13 +33,38 @@ async def list_lessons(
 ):
     """List all lessons. Accessible by all authenticated users."""
     lessons = lesson_service.get_all(
-        skip=skip, limit=limit, module_id=module_id, search=search
     )
     return success_response(
         [
             LessonResponse.model_validate(lesson).model_dump(by_alias=True)
             for lesson in lessons
         ]
+    )
+
+
+@router.get("/page", response_model=None)
+async def page_lessons(
+    page: int = Query(0, ge=0, description="Page number (0-indexed)"),
+    size: int = Query(20, ge=1, le=100, description="Page size (max 100)"),
+    module_id: Optional[int] = Query(None, description="Filter by module ID"),
+    search: Optional[str] = Query(None, description="Search by name or content"),
+    current_user: User = Depends(get_current_active_user),
+    lesson_service: LessonService = Depends(get_lesson_service),
+):
+    """Paginated lesson listing following api-design.md standards."""
+    result = lesson_service.page(
+        page=page + 1, page_size=size, module_id=module_id, search=search
+    )
+    content = [
+        LessonResponse.model_validate(lesson).model_dump(by_alias=True)
+        for lesson in result["data"]
+    ]
+    return paginated_response(
+        content=content,
+        page=page,
+        size=size,
+        total_elements=result["total"],
+        total_pages=result["total_pages"],
     )
 
 
@@ -76,7 +101,7 @@ async def get_lesson_details(
 # ============================================
 
 
-@router.post("/", response_model=None, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=None, status_code=status.HTTP_201_CREATED)
 async def create_lesson(
     lesson_data: LessonCreate,
     current_user: User = Depends(get_teacher_or_admin),

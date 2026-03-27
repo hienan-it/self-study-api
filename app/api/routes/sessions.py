@@ -21,7 +21,7 @@ router = APIRouter(prefix="/sessions", tags=["sessions"])
 # ============================================
 
 
-@router.post("/", response_model=None, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=None, status_code=status.HTTP_201_CREATED)
 async def create_session(
     data: StudySessionCreate,
     current_user: User = Depends(get_current_active_user),

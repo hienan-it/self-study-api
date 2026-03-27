@@ -27,7 +27,6 @@ class UserUpdate(APIModel, SoftDeletableSchema):
 
 class UserResponse(UserBase, AuditableSchema, SoftDeletableSchema):
     id: int
-    is_active: bool
 
 
 class LoginRequest(APIModel):

@@ -1,9 +1,11 @@
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, subqueryload
 from typing import Optional, List
 from fastapi import HTTPException, status, Depends
 from app.db.models.module import Module
 from app.db.models.subject import Subject
 from app.db.models.lesson import Lesson
+from app.db.models.lesson import lesson_knowledge
+from sqlalchemy import func
 from app.schemas.module_lesson import ModuleCreate, ModuleUpdate
 from app.db.session import get_db
 
@@ -62,11 +64,80 @@ class ModuleService:
         # Order by display_order, then name
         return query.order_by(Module.display_order, Module.name).offset(skip).limit(limit).all()
 
+    def page(
+            self,
+            page: int = 1,
+            page_size: int = 20,
+            subject_id: Optional[int] = None,
+            grade: Optional[int] = None,
+            search: Optional[str] = None
+    ) -> dict:
+        """
+        Get modules with standardized pagination
+
+        Args:
+            page: Page number (1-indexed)
+            page_size: Number of records per page
+            subject_id: Filter by subject
+            grade: Filter by grade
+            search: Search in name and description
+
+        Returns:
+            Dictionary with data and pagination metadata
+        """
+        query = self.db.query(Module)
+
+        # Apply filters
+        if subject_id is not None:
+            query = query.filter(Module.subject_id == subject_id)
+
+        if grade is not None:
+            query = query.filter(Module.grade == grade)
+
+        if search:
+            search_pattern = f"%{search}%"
+            query = query.filter(
+                (Module.name.ilike(search_pattern)) |
+                (Module.description.ilike(search_pattern))
+            )
+
+        total = query.count()
+        offset = (page - 1) * page_size
+
+        modules = (
+            query.order_by(Module.display_order, Module.name)
+            .offset(offset)
+            .limit(page_size)
+            .all()
+        )
+
+        return {
+            "data": modules,
+            "page": page,
+            "page_size": page_size,
+            "total": total,
+            "total_pages": (total + page_size - 1) // page_size if total > 0 else 0
+        }
+
     def get_by_subject(self, subject_id: int) -> List[Module]:
-        """Get all modules for a subject"""
-        return self.db.query(Module).filter(
+        """Get all modules for a subject with nested lessons"""
+        modules = self.db.query(Module).options(
+            subqueryload(Module.lessons)
+        ).filter(
             Module.subject_id == subject_id
         ).order_by(Module.grade, Module.display_order).all()
+
+        # Populate node_count for each lesson
+        for module in modules:
+            for lesson in module.lessons:
+                lesson.node_count = self.db.query(func.count(lesson_knowledge.c.knowledge_node_id)).filter(
+                    lesson_knowledge.c.lesson_id == lesson.id
+                ).scalar()
+                # Mock completed for now
+                lesson.completed = False
+            module.completed = all(l.completed for l in module.lessons) if module.lessons else False
+        
+        return modules
 
     def get_by_grade(self, grade: int) -> List[Module]:
         """Get all modules for a specific grade"""

@@ -7,7 +7,7 @@ from app.schemas.module_lesson import (
     ModuleUpdate,
     ModuleWithLessons,
 )
-from app.core.responses import success_response
+from app.core.responses import success_response, paginated_response
 from app.core.exceptions import ResourceNotFoundException
 from app.api.deps import get_current_active_user, get_admin_user, require_any_role
 from app.services.module_service import ModuleService, get_module_service
@@ -22,7 +22,7 @@ get_teacher_or_admin = require_any_role([UserRole.TEACHER, UserRole.ADMIN])
 # ============================================
 
 
-@router.get("/", response_model=None)
+@router.get("", response_model=None)
 async def list_modules(
     skip: int = Query(0, ge=0, description="Number of records to skip"),
     limit: int = Query(100, ge=1, le=1000, description="Maximum records to return"),
@@ -89,7 +89,7 @@ async def get_module_details(
 # ============================================
 
 
-@router.post("/", response_model=None, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=None, status_code=status.HTTP_201_CREATED)
 async def create_module(
     module_data: ModuleCreate,
     current_user: User = Depends(get_teacher_or_admin),
@@ -144,3 +144,29 @@ async def delete_module(
     """Delete module permanently. Requires: Admin role only."""
     module_service.delete(module_id)
     return None
+
+@router.get("/page", response_model=None)
+async def page_modules(
+    page: int = Query(0, ge=0, description="Page number (0-indexed)"),
+    size: int = Query(20, ge=1, le=100, description="Page size (max 100)"),
+    subject_id: Optional[int] = Query(None, description="Filter by subject ID"),
+    grade: Optional[int] = Query(None, ge=1, le=12, description="Filter by grade"),
+    search: Optional[str] = Query(None, description="Search by name or description"),
+    current_user: User = Depends(get_current_active_user),
+    module_service: ModuleService = Depends(get_module_service),
+):
+    """Paginated module listing following api-design.md standards."""
+    result = module_service.page(
+        page=page + 1, page_size=size, subject_id=subject_id, grade=grade, search=search
+    )
+    content = [
+        ModuleResponse.model_validate(m).model_dump(by_alias=True)
+        for m in result["data"]
+    ]
+    return paginated_response(
+        content=content,
+        page=page,
+        size=size,
+        total_elements=result["total"],
+        total_pages=result["total_pages"],
+    )

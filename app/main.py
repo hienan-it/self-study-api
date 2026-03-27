@@ -8,6 +8,7 @@ from app.api.routes.ai import router as ai_router
 from app.db.session import SessionLocal
 from app.utils.setup_admin import create_initial_admin
 from app.core.exceptions import register_exception_handlers
+from app.core.middleware import LoggingMiddleware
 
 
 @asynccontextmanager
@@ -46,6 +47,14 @@ async def lifespan(app: FastAPI):
         # Don't raise - let the app start anyway
     finally:
         db.close()
+
+    from app.core.logger import setup_logger
+    import logging
+
+    access_logger = setup_logger("access_logger", "access_log", logging.INFO)
+    error_logger = setup_logger("error_logger", "error_log", logging.DEBUG)
+
+    access_logger.info("App started", extra={"action_code": "STARTUP"})
 
     print("✅ Application startup complete!")
     print("=" * 50)
@@ -88,6 +97,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.add_middleware(LoggingMiddleware)
 
 # ============================================
 # ROUTERS

@@ -22,6 +22,7 @@ class Lesson(BaseModel):
     module_id = Column(Integer, ForeignKey("modules.id", ondelete="CASCADE"), nullable=False)
     name = Column(String(200), nullable=False)
     content = Column(Text, nullable=True)  # Rich text content
+    duration_mins = Column(Integer, nullable=True)
     display_order = Column(Integer, default=0)
 
     # Relationships

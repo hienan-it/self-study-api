@@ -62,6 +62,56 @@ class SubjectService:
         # Order by name and apply pagination
         return query.order_by(Subject.name).offset(skip).limit(limit).all()
 
+    def page(
+            self,
+            page: int = 1,
+            page_size: int = 20,
+            is_deleted: Optional[bool] = None,
+            search: Optional[str] = None
+    ) -> dict:
+        """
+        Get subjects with standardized pagination
+
+        Args:
+            page: Page number (1-indexed)
+            page_size: Number of records per page
+            is_deleted: Filter by active status
+            search: Search in name and description
+
+        Returns:
+            Dictionary with data and pagination metadata
+        """
+        query = self.db.query(Subject)
+
+        # Apply filters
+        if is_deleted is not None:
+            query = query.filter(Subject.is_deleted == is_deleted)
+
+        if search:
+            search_pattern = f"%{search}%"
+            query = query.filter(
+                (Subject.name.ilike(search_pattern)) |
+                (Subject.description.ilike(search_pattern))
+            )
+
+        total = query.count()
+        offset = (page - 1) * page_size
+
+        subjects = (
+            query.order_by(Subject.name)
+            .offset(offset)
+            .limit(page_size)
+            .all()
+        )
+
+        return {
+            "data": subjects,
+            "page": page,
+            "page_size": page_size,
+            "total": total,
+            "total_pages": (total + page_size - 1) // page_size if total > 0 else 0
+        }
+
     def get_with_stats(self, subject_id: int) -> dict:
         """
         Get subject with statistics
@@ -94,7 +144,7 @@ class SubjectService:
             "id": subject.id,
             "name": subject.name,
             "description": subject.description,
-            "is_active": subject.is_active,
+            "is_deleted": subject.is_deleted,
             "created_at": subject.created_at,
             "updated_at": subject.updated_at,
             "module_count": module_count,
@@ -146,7 +196,7 @@ class SubjectService:
         subject = Subject(
             name=subject_data.name,
             description=subject_data.description,
-            is_active=subject_data.isActive
+            is_deleted=False
         )
 
         self.db.add(subject)
@@ -200,9 +250,9 @@ class SubjectService:
 
         return subject
 
-    def toggle_active(self, subject_id: int) -> Subject:
+    def toggle_deleted(self, subject_id: int) -> Subject:
         """
-        Toggle subject active status
+        Toggle subject deleted status
 
         Args:
             subject_id: Subject ID
@@ -217,7 +267,7 @@ class SubjectService:
                 detail=f"Subject with id {subject_id} not found"
             )
 
-        subject.is_active = not subject.is_active
+        subject.is_deleted = not subject.is_deleted
         self.db.commit()
         self.db.refresh(subject)
 
