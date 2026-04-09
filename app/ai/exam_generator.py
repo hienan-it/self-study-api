@@ -92,6 +92,7 @@ BLOOM_MAPPING = {
 @dataclass
 class GeneratedQuestion:
     """Câu hỏi được sinh ra từ LLM."""
+    id: Optional[int]           # ID trong DB sau khi lưu
     knowledge_node_id: int
     knowledge_node_title: str
     question_type: str          # "multiple_choice" | "short_answer" | "true_false"
@@ -300,18 +301,21 @@ Lưu ý:
 - Mỗi câu hỏi phải độc lập, không lặp lại ý"""
 
         try:
+            print(f"[DEBUG-EXAM] Calling LLM for node {node.id} ('{node.title}'), requesting {num_questions} questions")
             result = await self.llm.complete_json_fast(
                 user_prompt=user_prompt,
                 system_prompt=system_prompt,
                 temperature=0.6,  # Cao hơn để câu hỏi đa dạng
                 max_tokens=2000,
             )
+            print(f"[DEBUG-EXAM] LLM result keys: {list(result.keys()) if result else 'None'}")
 
             questions_data = result.get("questions", [])
             generated = []
 
             for q_data in questions_data[:num_questions]:
                 generated.append(GeneratedQuestion(
+                    id=None,
                     knowledge_node_id=node.id,
                     knowledge_node_title=node.title,
                     question_type=question_type,
@@ -327,7 +331,13 @@ Lưu ý:
             return generated
 
         except Exception as e:
-            logger.error(f"[Exam] Lỗi khi sinh câu hỏi cho node {node.id}: {e}")
+            import traceback
+            print(f"[DEBUG-EXAM] ERROR for node {node.id} ('{node.title}'): {type(e).__name__}: {e}")
+            traceback.print_exc()
+            logger.error(
+                f"[Exam] Lỗi khi sinh câu hỏi cho node {node.id} ('{node.title}'): {e}",
+                exc_info=True,
+            )
             return []
 
     async def generate_batch(
@@ -488,6 +498,43 @@ class ExamGenerator:
 
         logger.info(f"[Exam] Sinh được {len(questions)} câu hỏi")
 
+        # ---- Bước 5: Save Questions to DB ----
+        from app.db.models.question import Question, QuestionType, QuestionDifficulty
+        
+        # Map difficulty string to Enum
+        diff_enum_map = {
+            "basic": QuestionDifficulty.EASY,
+            "intermediate": QuestionDifficulty.MEDIUM,
+            "advanced": QuestionDifficulty.HARD
+        }
+        
+        # Map question_type string to Enum
+        type_enum_map = {
+            "multiple_choice": QuestionType.MULTIPLE_CHOICE,
+            "short_answer": QuestionType.SHORT_ANSWER,
+            "true_false": QuestionType.TRUE_FALSE
+        }
+
+        db_questions = []
+        for q in questions:
+            db_q = Question(
+                knowledge_node_id=q.knowledge_node_id,
+                question_type=type_enum_map.get(q.question_type, QuestionType.MULTIPLE_CHOICE),
+                difficulty=diff_enum_map.get(q.difficulty, QuestionDifficulty.MEDIUM),
+                content=q.content,
+                options=q.options,
+                correct_answer=q.correct_answer,
+                explanation=f"[{q.bloom_level}] {q.explanation}",
+            )
+            db_questions.append(db_q)
+        
+        self.db.add_all(db_questions)
+        self.db.commit()
+
+        # Update generated questions with new IDs
+        for q, db_q in zip(questions, db_questions):
+            q.id = db_q.id
+
         return ExamResult(
             questions=questions,
             coverage_report=coverage_report,
@@ -505,6 +552,7 @@ class ExamGenerator:
             "coverage_report": result.coverage_report,
             "questions": [
                 {
+                    "id": q.id,
                     "knowledge_node_id": q.knowledge_node_id,
                     "knowledge_node_title": q.knowledge_node_title,
                     "question_type": q.question_type,

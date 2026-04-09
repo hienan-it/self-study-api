@@ -4,22 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="81777910-5c37-41d3-a883-dde6ae354888" name="Changes" comment="Refactor project">
-      <change beforePath="$PROJECT_DIR$/.idea/FastAPIProject.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/FastAPIProject.iml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/api/routes/ai.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/api/routes/ai.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/api/routes/auth.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/api/routes/auth.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/api/routes/knowledge.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/api/routes/knowledge.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/api/routes/lessons.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/api/routes/lessons.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/api/routes/modules.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/api/routes/modules.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/api/routes/sessions.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/api/routes/sessions.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/api/routes/subjects.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/api/routes/subjects.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/api/routes/users.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/api/routes/users.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/main.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/schemas/base.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/schemas/base.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/services/knowledge_service.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/services/knowledge_service.py" afterDir="false" />
-    </list>
+    <list default="true" id="81777910-5c37-41d3-a883-dde6ae354888" name="Changes" comment="Refactor project" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -55,13 +40,13 @@
     "RunOnceActivity.git.unshallow": "true",
     "git-widget-placeholder": "dev",
     "ignore.virus.scanning.warn.message": "true",
-    "last_opened_file_path": "D:/AdaptivePath/FastAPIProject/app/main.py",
+    "last_opened_file_path": "D:/AdaptivePath/study-master-api/app/main.py",
     "node.js.detected.package.eslint": "true",
     "node.js.detected.package.tslint": "true",
     "node.js.selected.package.eslint": "(autodetect)",
     "node.js.selected.package.tslint": "(autodetect)",
     "nodejs_package_manager_path": "npm",
-    "settings.editor.selected.configurable": "Errors",
+    "settings.editor.selected.configurable": "preferences.pluginManager",
     "vue.rearranger.settings.migration": "true"
   },
   "keyToStringList": {
@@ -85,7 +70,7 @@
   </component>
   <component name="RunManager">
     <configuration name="FastAPIProject" type="Python.FastAPI">
-      <option name="file" value="D:\AdaptivePath\FastAPIProject\app\main.py" />
+      <option name="file" value="D:\AdaptivePath\study-master-api\app\main.py" />
       <module name="FastAPIProject" />
       <option name="ENV_FILES" value="" />
       <option name="INTERPRETER_OPTIONS" value="" />
@@ -129,6 +114,7 @@
       <workItem from="1773598007583" duration="44535000" />
       <workItem from="1774373897877" duration="726000" />
       <workItem from="1774374668179" duration="3959000" />
+      <workItem from="1774528044375" duration="19827000" />
     </task>
     <task id="LOCAL-00001" summary="Setup basic auth and user api">
       <option name="closed" value="true" />
@@ -197,7 +183,19 @@
     <MESSAGE value="Refactor project" />
     <option name="LAST_COMMIT_MESSAGE" value="Refactor project" />
   </component>
+  <component name="XDebuggerManager">
+    <breakpoint-manager>
+      <breakpoints>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/app/ai/mindmap_generator.py</url>
+          <line>286</line>
+          <option name="timeStamp" value="1" />
+        </line-breakpoint>
+      </breakpoints>
+    </breakpoint-manager>
+  </component>
   <component name="com.intellij.coverage.CoverageDataManagerImpl">
+    <SUITE FILE_PATH="coverage/study_master_api$FastAPIProject.coverage" NAME="FastAPIProject Coverage Results" MODIFIED="1774644712776" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="" />
     <SUITE FILE_PATH="coverage/FastAPIProject$FastAPIProject.coverage" NAME="FastAPIProject Coverage Results" MODIFIED="1774376035329" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="" />
     <SUITE FILE_PATH="coverage/FastAPIProject$main.coverage" NAME="main Coverage Results" MODIFIED="1774374797407" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/app" />
   </component>

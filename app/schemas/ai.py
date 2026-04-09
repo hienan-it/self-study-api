@@ -39,6 +39,7 @@ class ExamGenerateRequest(BaseModel):
 
 
 class ExamQuestionResponse(BaseModel):
+    id: int
     knowledge_node_id: int
     knowledge_node_title: str
     question_type: str

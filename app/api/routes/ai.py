@@ -185,7 +185,7 @@ async def generate_exam(
             coverage_threshold=request.coverage_threshold,
             max_depth=request.max_depth,
         )
-
+        
         exam = ExamResponse(
             total_questions=result.total_questions,
             nodes_covered=result.nodes_covered,
@@ -193,6 +193,7 @@ async def generate_exam(
             coverage_report=result.coverage_report,
             questions=[
                 ExamQuestionResponse(
+                    id=q.id,
                     knowledge_node_id=q.knowledge_node_id,
                     knowledge_node_title=q.knowledge_node_title,
                     question_type=q.question_type,
@@ -207,6 +208,218 @@ async def generate_exam(
             ],
         )
         return success_response(exam.model_dump(by_alias=True))
+
+        # result_data = {
+        #         "success": True,
+        #         "data": {
+        #             "total_questions": 10,
+        #             "nodes_covered": 7,
+        #             "nodes_total": 9,
+        #             "coverage_report": {
+        #             "nodes_total": 9,
+        #             "nodes_covered": 7,
+        #             "coverage_rate": 77.8,
+        #             "allocation": {
+        #                 "Thông tin": 1,
+        #                 "Khái niệm tin học": 2,
+        #                 "Dữ liệu": 2,
+        #                 "Vai trò máy tính": 0,
+        #                 "Bit": 1,
+        #                 "Đơn vị đo thông tin": 1,
+        #                 "Dạng thông tin": 0,
+        #                 "Đặc tính máy tính": 1,
+        #                 "Sự hình thành tin học": 2
+        #             }
+        #         },
+        #         "questions": [
+        #             {
+        #                 "knowledge_node_id": 7,
+        #                 "knowledge_node_title": "Bit",
+        #                 "question_type": "multiple_choice",
+        #                 "difficulty": "basic",
+        #                 "bloom_level": "Remember (Nhớ)",
+        #                 "content": "Đơn vị nhỏ nhất của thông tin được gọi là gì?",
+        #                 "options": {
+        #                     "A": "Bit",
+        #                     "B": "Byte",
+        #                     "C": "Kilobyte",
+        #                     "D": "Megabyte"
+        #                 },
+        #                 "correct_answer": "A",
+        #                 "explanation": "Theo định nghĩa, Bit là đơn vị nhỏ nhất của thông tin. Các đơn vị khác như Byte, Kilobyte, Megabyte đều là các đơn vị đo thông tin nhưng lớn hơn Bit."
+        #             },
+        #             {
+        #                 "knowledge_node_id": 1,
+        #                 "knowledge_node_title": "Sự hình thành tin học",
+        #                 "question_type": "multiple_choice",
+        #                 "difficulty": "basic",
+        #                 "bloom_level": "Remember (Nhớ)",
+        #                 "content": "Phát biểu nào sau đây mô tả đúng về sự phát triển của Tin học dựa trên nội dung kiến thức đã cho?",
+        #                 "options": {
+        #                     "A": "Tin học phát triển độc lập, không liên quan đến các yếu tố xã hội.",
+        #                     "B": "Tin học chỉ phát triển sau khi cách mạng công nghiệp đã kết thúc.",
+        #                     "C": "Tin học phát triển song hành với cách mạng công nghiệp và sự bùng nổ thông tin.",
+        #                     "D": "Tin học chỉ phát triển nhờ sự bùng nổ thông tin, không liên quan đến cách mạng công nghiệp."
+        #                 },
+        #                 "correct_answer": "C",
+        #                 "explanation": "Nội dung kiến thức chỉ ra rằng 'Tin học phát triển cùng cách mạng công nghiệp và sự bùng nổ thông tin', điều này có nghĩa là Tin học phát triển song hành với hai yếu tố này. Các phương án khác đều không đúng với thông tin được cung cấp."
+        #             },
+        #             {
+        #                 "knowledge_node_id": 6,
+        #                 "knowledge_node_title": "Thông tin",
+        #                 "question_type": "multiple_choice",
+        #                 "difficulty": "basic",
+        #                 "bloom_level": "Remember (Nhớ)",
+        #                 "content": "Định nghĩa nào sau đây mô tả đúng về thông tin?",
+        #                 "options": {
+        #                     "A": "Thông tin là dữ liệu thô, chưa qua xử lý.",
+        #                     "B": "Thông tin là dữ liệu đã được xử lý có ý nghĩa.",
+        #                     "C": "Thông tin là tập hợp các sự kiện và con số.",
+        #                     "D": "Thông tin là dữ liệu đã được thu thập nhưng không cần xử lý."
+        #                 },
+        #                 "correct_answer": "B",
+        #                 "explanation": "Theo nội dung kiến thức đã học, thông tin được định nghĩa là dữ liệu đã được xử lý và mang lại ý nghĩa. Các phương án khác mô tả dữ liệu ở trạng thái thô hoặc chưa đầy đủ về bản chất của thông tin."
+        #             },
+        #             {
+        #                 "knowledge_node_id": 5,
+        #                 "knowledge_node_title": "Dữ liệu",
+        #                 "question_type": "multiple_choice",
+        #                 "difficulty": "basic",
+        #                 "bloom_level": "Remember (Nhớ)",
+        #                 "content": "Theo nội dung kiến thức đã học, khái niệm 'dữ liệu' được định nghĩa là gì?",
+        #                 "options": {
+        #                     "A": "Các sự kiện thô chưa xử lý.",
+        #                     "B": "Các thông tin đã được phân tích.",
+        #                     "C": "Những kết quả đã được tổng hợp.",
+        #                     "D": "Tập hợp các quyết định quan trọng."
+        #                 },
+        #                 "correct_answer": "A",
+        #                 "explanation": "Dữ liệu được định nghĩa là các sự kiện thô chưa xử lý. Đây là đặc điểm cơ bản nhất để nhận biết dữ liệu."
+        #             },
+        #             {
+        #                 "knowledge_node_id": 4,
+        #                 "knowledge_node_title": "Khái niệm tin học",
+        #                 "question_type": "multiple_choice",
+        #                 "difficulty": "basic",
+        #                 "bloom_level": "Remember (Nhớ)",
+        #                 "content": "Theo định nghĩa được cung cấp, Tin học là ngành khoa học nghiên cứu về vấn đề gì?",
+        #                 "options": {
+        #                     "A": "Thông tin và cách xử lý thông tin bằng máy tính.",
+        #                     "B": "Lịch sử phát triển của các loại máy tính.",
+        #                     "C": "Các kỹ thuật lập trình và phát triển phần mềm.",
+        #                     "D": "Cấu tạo và nguyên lý hoạt động của máy tính."
+        #                 },
+        #                 "correct_answer": "A",
+        #                 "explanation": "Theo định nghĩa, Tin học là ngành khoa học nghiên cứu về thông tin và cách xử lý thông tin bằng máy tính. Các phương án khác là những lĩnh vực liên quan hoặc một phần của Tin học nhưng không phải là định nghĩa bao quát."
+        #             },
+        #             {
+        #                 "knowledge_node_id": 5,
+        #                 "knowledge_node_title": "Dữ liệu",
+        #                 "question_type": "multiple_choice",
+        #                 "difficulty": "basic",
+        #                 "bloom_level": "Remember (Nhớ)",
+        #                 "content": "Đặc điểm nào sau đây mô tả đúng về dữ liệu?",
+        #                 "options": {
+        #                     "A": "Đã được xử lý và có ý nghĩa.",
+        #                     "B": "Luôn mang lại giá trị trực tiếp.",
+        #                     "C": "Là các sự kiện thô.",
+        #                     "D": "Giúp đưa ra quyết định nhanh chóng."
+        #                 },
+        #                 "correct_answer": "C",
+        #                 "explanation": "Dữ liệu có đặc điểm là các sự kiện thô, chưa trải qua quá trình xử lý để trở thành thông tin có ý nghĩa. Các phương án khác mô tả thông tin hoặc giá trị của thông tin."
+        #             },
+        #             {
+        #                 "knowledge_node_id": 8,
+        #                 "knowledge_node_title": "Đơn vị đo thông tin",
+        #                 "question_type": "multiple_choice",
+        #                 "difficulty": "basic",
+        #                 "bloom_level": "Remember (Nhớ)",
+        #                 "content": "Trong các đơn vị sau, đơn vị nào dùng để đo lượng thông tin?",
+        #                 "options": {
+        #                     "A": "Byte",
+        #                     "B": "Mét",
+        #                     "C": "Kilogram",
+        #                     "D": "Giờ"
+        #                 },
+        #                 "correct_answer": "A",
+        #                 "explanation": "Byte là một trong các đơn vị cơ bản dùng để đo lượng thông tin, thường được dùng để chỉ dung lượng của dữ liệu hoặc bộ nhớ. Mét dùng để đo chiều dài, Kilogram dùng để đo khối lượng, còn Giờ dùng để đo thời gian."
+        #             },
+        #             {
+        #                 "knowledge_node_id": 1,
+        #                 "knowledge_node_title": "Sự hình thành tin học",
+        #                 "question_type": "multiple_choice",
+        #                 "difficulty": "basic",
+        #                 "bloom_level": "Remember (Nhớ)",
+        #                 "content": "Theo nội dung kiến thức, sự hình thành và phát triển của Tin học gắn liền với những yếu tố chính nào?",
+        #                 "options": {
+        #                     "A": "Cách mạng công nghiệp và sự bùng nổ thông tin.",
+        #                     "B": "Sự phát triển của nông nghiệp và y học.",
+        #                     "C": "Các cuộc chiến tranh thế giới và khủng hoảng kinh tế.",
+        #                     "D": "Sự ra đời của các loại hình nghệ thuật mới."
+        #                 },
+        #                 "correct_answer": "A",
+        #                 "explanation": "Nội dung kiến thức đã nêu rõ: 'Tin học phát triển cùng cách mạng công nghiệp và sự bùng nổ thông tin'. Do đó, đáp án A là chính xác."
+        #             },
+        #             {
+        #                 "knowledge_node_id": 3,
+        #                 "knowledge_node_title": "Đặc tính máy tính",
+        #                 "question_type": "multiple_choice",
+        #                 "difficulty": "basic",
+        #                 "bloom_level": "Remember (Nhớ)",
+        #                 "content": "Đâu là một trong những đặc tính cơ bản của máy tính được đề cập?",
+        #                 "options": {
+        #                     "A": "Tốc độ xử lý chậm",
+        #                     "B": "Khả năng lưu trữ nhỏ",
+        #                     "C": "Hoạt động liên tục",
+        #                     "D": "Độ chính xác thấp"
+        #                 },
+        #                 "correct_answer": "C",
+        #                 "explanation": "Theo nội dung kiến thức, máy tính có đặc tính hoạt động liên tục. Các phương án A, B, D đều trái ngược với các đặc tính cơ bản khác của máy tính là nhanh, lưu trữ lớn và chính xác."
+        #             },
+        #             {
+        #                 "knowledge_node_id": 4,
+        #                 "knowledge_node_title": "Khái niệm tin học",
+        #                 "question_type": "multiple_choice",
+        #                 "difficulty": "basic",
+        #                 "bloom_level": "Remember (Nhớ)",
+        #                 "content": "Phạm vi nghiên cứu chính của Tin học, như đã nêu, bao gồm những yếu tố nào?",
+        #                 "options": {
+        #                     "A": "Thông tin và cách thức xử lý chúng bằng máy tính.",
+        #                     "B": "Dữ liệu và các phương pháp lưu trữ chúng.",
+        #                     "C": "Phần cứng máy tính và các thiết bị ngoại vi.",
+        #                     "D": "Các ngôn ngữ lập trình và ứng dụng phần mềm."
+        #                 },
+        #                 "correct_answer": "A",
+        #                 "explanation": "Định nghĩa Tin học tập trung vào việc nghiên cứu thông tin và cách xử lý thông tin bằng máy tính. Mặc dù dữ liệu, phần cứng và lập trình là các khía cạnh quan trọng, nhưng 'thông tin và cách xử lý bằng máy tính' là cốt lõi của định nghĩa được cung cấp."
+        #             }
+        #         ]
+        #     }
+        # }
+
+        # actual_data = result_data["data"]
+
+        # exam = ExamResponse(
+        #     total_questions=actual_data["total_questions"],
+        #     nodes_covered=actual_data["nodes_covered"],
+        #     nodes_total=actual_data["nodes_total"],
+        #     coverage_report=actual_data["coverage_report"],
+        #     questions=[
+        #         ExamQuestionResponse(
+        #             id=q.get("id", 0),
+        #             knowledge_node_id=q["knowledge_node_id"],
+        #             knowledge_node_title=q["knowledge_node_title"],
+        #             question_type=q["question_type"],
+        #             difficulty=q["difficulty"],
+        #             bloom_level=q["bloom_level"],
+        #             content=q["content"],
+        #             options=q["options"],
+        #             correct_answer=q["correct_answer"],
+        #             explanation=q["explanation"],
+        #         )
+        #         for q in actual_data["questions"]
+        #     ],
+        # )
+        # return success_response(exam.model_dump(by_alias=True))
 
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
@@ -248,7 +461,21 @@ async def generate_exam_for_session(
             nodes_covered=result.nodes_covered,
             nodes_total=result.nodes_total,
             coverage_report=result.coverage_report,
-            questions=[ExamQuestionResponse(**vars(q)) for q in result.questions],
+            questions=[
+                ExamQuestionResponse(
+                    id=q.id,
+                    knowledge_node_id=q.knowledge_node_id,
+                    knowledge_node_title=q.knowledge_node_title,
+                    question_type=q.question_type,
+                    difficulty=q.difficulty,
+                    bloom_level=q.bloom_level,
+                    content=q.content,
+                    options=q.options,
+                    correct_answer=q.correct_answer,
+                    explanation=q.explanation,
+                )
+                for q in result.questions
+            ],
         )
         return success_response(exam.model_dump(by_alias=True))
 
