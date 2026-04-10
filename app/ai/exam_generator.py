@@ -31,9 +31,7 @@ from app.ai.llm_client import LLMClient, get_llm_client
 from app.ai.graph_rag import GraphContext, GraphContextSerializer, SubgraphExtractor
 from app.db.models.knowledge import KnowledgeNode, DifficultyLevel, NodeType
 from app.db.models.lesson import lesson_knowledge
-
-logger = logging.getLogger(__name__)
-
+from app.core.logger import access_logger, error_logger
 
 # ============================================
 # BLOOM'S TAXONOMY MAPPING
@@ -301,14 +299,14 @@ Lưu ý:
 - Mỗi câu hỏi phải độc lập, không lặp lại ý"""
 
         try:
-            print(f"[DEBUG-EXAM] Calling LLM for node {node.id} ('{node.title}'), requesting {num_questions} questions")
+            access_logger.info(f"[DEBUG-EXAM] Calling LLM for node {node.id} ('{node.title}'), requesting {num_questions} questions", extra={"action_code": "GENERATE_EXAM"})
             result = await self.llm.complete_json_fast(
                 user_prompt=user_prompt,
                 system_prompt=system_prompt,
                 temperature=0.6,  # Cao hơn để câu hỏi đa dạng
                 max_tokens=2000,
             )
-            print(f"[DEBUG-EXAM] LLM result keys: {list(result.keys()) if result else 'None'}")
+            access_logger.info(f"[DEBUG-EXAM] LLM result keys: {list(result.keys()) if result else 'None'}", extra={"action_code": "GENERATE_EXAM"})
 
             questions_data = result.get("questions", [])
             generated = []
@@ -327,16 +325,14 @@ Lưu ý:
                     explanation=q_data.get("explanation", ""),
                 ))
 
-            logger.info(f"[Exam] Sinh {len(generated)} câu cho node '{node.title}'")
+            access_logger.info(f"[Exam] Sinh {len(generated)} câu cho node '{node.title}'", extra={"action_code": "GENERATE_EXAM"})
             return generated
 
         except Exception as e:
-            import traceback
-            print(f"[DEBUG-EXAM] ERROR for node {node.id} ('{node.title}'): {type(e).__name__}: {e}")
-            traceback.print_exc()
-            logger.error(
+            error_logger.error(
                 f"[Exam] Lỗi khi sinh câu hỏi cho node {node.id} ('{node.title}'): {e}",
                 exc_info=True,
+                extra={"action_code": "GENERATE_EXAM_ERROR"}
             )
             return []
 
@@ -432,10 +428,18 @@ class ExamGenerator:
         # ---- Bước 1: Query nodes từ lessons ----
         seed_nodes: List[KnowledgeNode] = (
             self.db.query(KnowledgeNode)
-            .join(lesson_knowledge, KnowledgeNode.id == lesson_knowledge.c.knowledge_node_id)
-            .filter(lesson_knowledge.c.lesson_id.in_(lesson_ids))
+            .outerjoin(lesson_knowledge, KnowledgeNode.id == lesson_knowledge.c.knowledge_node_id)
+            .filter(
+                or_(
+                    KnowledgeNode.lesson_id.in_(lesson_ids),
+                    lesson_knowledge.c.lesson_id.in_(lesson_ids)
+                )
+            )
+            .distinct()
             .all()
         )
+        access_logger.debug(f"[Exam Debug] Queried {len(seed_nodes)} seed_nodes for lesson_ids: {lesson_ids}", extra={"action_code": "EXAM_DEBUG"})
+        access_logger.debug(f"[Exam Debug] seed_nodes IDs: {[n.id for n in seed_nodes]}", extra={"action_code": "EXAM_DEBUG"})
 
         if not seed_nodes:
             raise ValueError(f"Không tìm thấy knowledge nodes cho lessons: {lesson_ids}")
@@ -452,19 +456,24 @@ class ExamGenerator:
             )
             .all()
         )
+        access_logger.debug(f"[Exam Debug] Queried {len(all_edges)} all_edges", extra={"action_code": "EXAM_DEBUG"})
 
         neighbor_ids = set()
         for edge in all_edges:
             neighbor_ids.add(edge.from_node_id)
             neighbor_ids.add(edge.to_node_id)
 
+
         all_nodes: List[KnowledgeNode] = (
             self.db.query(KnowledgeNode)
             .filter(KnowledgeNode.id.in_(neighbor_ids))
             .all()
         )
+        access_logger.debug(f"[Exam Debug] Queried {len(all_nodes)} neighbor nodes", extra={"action_code": "EXAM_DEBUG"})
+        
         node_lookup = {n.id: n for n in all_nodes}
-
+        
+        access_logger.debug(f"[Exam Debug] Calling extractor.extract_for_lessons with {len(seed_nodes)} seed_nodes, {len(all_edges)} edges, {len(node_lookup)} neighbor lookup...", extra={"action_code": "EXAM_DEBUG"})
         # ---- Bước 2: Extract Subgraph ----
         ctx = self.extractor.extract_for_lessons(
             lesson_nodes=seed_nodes,
@@ -473,8 +482,7 @@ class ExamGenerator:
             max_depth=max_depth,
             difficulty_filter=difficulty_filter,
         )
-
-        logger.info(f"[Exam] Subgraph: {ctx.total_nodes} nodes cho {len(lesson_ids)} lessons")
+        access_logger.info(f"[Exam] Subgraph: {ctx.total_nodes} nodes cho {len(lesson_ids)} lessons", extra={"action_code": "GENERATE_EXAM"})
 
         # ---- Bước 3: Weighted Sampling ----
         allocation = self.sampler.sample(
@@ -484,9 +492,10 @@ class ExamGenerator:
         )
 
         coverage_report = self.sampler.get_coverage_report(ctx, allocation)
-        logger.info(
+        access_logger.info(
             f"[Exam] Coverage: {coverage_report['nodes_covered']}/{coverage_report['nodes_total']} nodes "
-            f"({coverage_report['coverage_rate']}%)"
+            f"({coverage_report['coverage_rate']}%)",
+            extra={"action_code": "GENERATE_EXAM"}
         )
 
         # ---- Bước 4: LLM Question Generation ----
@@ -496,7 +505,7 @@ class ExamGenerator:
             question_type=question_type,
         )
 
-        logger.info(f"[Exam] Sinh được {len(questions)} câu hỏi")
+        access_logger.info(f"[Exam] Sinh được {len(questions)} câu hỏi", extra={"action_code": "GENERATE_EXAM"})
 
         # ---- Bước 5: Save Questions to DB ----
         from app.db.models.question import Question, QuestionType, QuestionDifficulty

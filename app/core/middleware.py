@@ -2,6 +2,7 @@ import time
 from fastapi import Request
 from starlette.middleware.base import BaseHTTPMiddleware
 import logging
+from app.core.logger import error_logger, access_logger
 
 SKIP_PATHS = {"/health", "/api/health", "/api/v1/health"}
 SKIP_METHODS = {"OPTIONS"}
@@ -16,7 +17,7 @@ class LoggingMiddleware(BaseHTTPMiddleware):
         try:
             response = await call_next(request)
         except Exception as e:
-            logging.getLogger("error_logger").error(
+            error_logger.error(
                 f"Unhandled exception: {str(e)}",
                 exc_info=True,
                 extra={"action_code": "INTERNAL_SERVER_ERROR"}
@@ -24,21 +25,19 @@ class LoggingMiddleware(BaseHTTPMiddleware):
             raise
 
         process_time_ms = (time.time() - start_time) * 1000
-        access_log = logging.getLogger("access_logger")
-        
         # Format: [METHOD] PATH - STATUS_CODE - LATENCYms
         if response.status_code >= 500:
-            access_log.error(
+            access_logger.error(
                 f"[{request.method}] {request.url.path} - {response.status_code} - {process_time_ms:.2f}ms",
                 extra={"action_code": "API_ACCESS"}
             )
         elif response.status_code >= 400:
-            access_log.warning(
+            access_logger.warning(
                 f"[{request.method}] {request.url.path} - {response.status_code} - {process_time_ms:.2f}ms",
                 extra={"action_code": "API_ACCESS"}
             )
         else:
-            access_log.info(
+            access_logger.info(
                 f"[{request.method}] {request.url.path} - {response.status_code} - {process_time_ms:.2f}ms",
                 extra={"action_code": "API_ACCESS"}
             )

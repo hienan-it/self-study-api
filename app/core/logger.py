@@ -2,9 +2,9 @@ import logging
 import os
 import sys
 from logging.handlers import TimedRotatingFileHandler
-from logging.handlers import TimedRotatingFileHandler
 
-LOGS_DIR = os.path.join(os.getcwd(), "logs")
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+LOGS_DIR = os.path.join(PROJECT_ROOT, "logs")
 if not os.path.exists(LOGS_DIR):
     os.makedirs(LOGS_DIR)
 
@@ -74,5 +74,5 @@ def setup_logger(name: str, log_file_prefix: str, level: int) -> logging.Logger:
     
     return logger
 
-# error_logger = setup_logger("error_logger", "error_log", logging.WARNING)
-# access_logger = setup_logger("access_logger", "access_log", logging.INFO)
+error_logger = setup_logger("error_logger", "error_log", logging.DEBUG)
+access_logger = setup_logger("access_logger", "access_log", logging.DEBUG)

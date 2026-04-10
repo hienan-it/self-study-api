@@ -7,7 +7,7 @@ class MindmapGenerateRequest(BaseModel):
     lesson_ids: List[int] = Field(..., min_items=1, description="Danh sách lesson ID")
     root_node_id: Optional[int] = Field(None, description="Node làm gốc (None = tự chọn)")
     max_depth: int = Field(default=3, ge=1, le=5, description="Độ sâu BFS tối đa")
-    min_importance: int = Field(default=2, ge=1, le=10, description="Ngưỡng importance tối thiểu")
+    min_importance: int = Field(default=1, ge=1, le=10, description="Ngưỡng importance tối thiểu")
     difficulty_filter: Optional[DifficultyLevel] = Field(None, description="Lọc theo độ khó")
     enrich_with_llm: bool = Field(default=True, description="Dùng LLM để thêm ghi chú học tập")
 

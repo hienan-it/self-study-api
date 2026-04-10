@@ -14,6 +14,7 @@ Endpoints:
 Tất cả đều yêu cầu authentication.
 """
 
+import traceback
 from fastapi import APIRouter, Depends, Query, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import Optional
@@ -81,6 +82,7 @@ async def generate_mindmap(
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
     except Exception as e:
+        traceback.print_exc()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Lỗi khi sinh mindmap: {str(e)}",

@@ -23,6 +23,7 @@ from collections import deque
 from dataclasses import dataclass
 
 from app.db.models.knowledge import KnowledgeNode, KnowledgeEdge, DifficultyLevel, RelationType
+from app.core.logger import access_logger
 
 
 # ============================================
@@ -140,12 +141,18 @@ class SubgraphExtractor:
 
         queue: deque = deque()
 
+        access_logger.debug(f"[GraphRAG] Initialized BFS with {len(lesson_nodes)} seed nodes", extra={"action_code": "GRAPHRAG_DEBUG"})
+
         # Seed: các node từ lesson đã chọn
         for node in lesson_nodes:
+            access_logger.debug(f"[GraphRAG] Checking seed node {node.id} (importance: {node.importance_weight}, diff: {node.difficulty_level}, type: {node.node_type})", extra={"action_code": "GRAPHRAG_DEBUG"})
             if self._passes_filter(node, min_importance, difficulty_filter, grade_filter):
                 visited_ids.add(node.id)
                 selected_nodes[node.id] = node
                 queue.append((node, 0))
+                access_logger.debug(f"[GraphRAG] Added seed node {node.id} to queue", extra={"action_code": "GRAPHRAG_DEBUG"})
+            else:
+                access_logger.debug(f"[GraphRAG] Seed node {node.id} FAILED filter!", extra={"action_code": "GRAPHRAG_DEBUG"})
 
         while queue:
             current, depth = queue.popleft()
@@ -167,10 +174,14 @@ class SubgraphExtractor:
                     selected_edges.append(edge)
 
                 if neighbor_id not in visited_ids:
+                    access_logger.debug(f"[GraphRAG] Exploring neighbor {neighbor_id} from {current.id} at edge {edge.id}", extra={"action_code": "GRAPHRAG_DEBUG"})
                     if self._passes_filter(neighbor, min_importance, difficulty_filter, grade_filter):
                         visited_ids.add(neighbor_id)
                         selected_nodes[neighbor_id] = neighbor
                         queue.append((neighbor, depth + 1))
+                        access_logger.debug(f"[GraphRAG] Added neighbor {neighbor_id} to queue", extra={"action_code": "GRAPHRAG_DEBUG"})
+                    else:
+                        access_logger.debug(f"[GraphRAG] Neighbor {neighbor_id} FAILED filter!", extra={"action_code": "GRAPHRAG_DEBUG"})
 
         # Chỉ giữ edges có cả 2 đầu trong subgraph
         final_edges = [
@@ -193,10 +204,13 @@ class SubgraphExtractor:
         grade_filter: Optional[int],
     ) -> bool:
         if node.importance_weight < min_importance:
+            access_logger.debug(f"[GraphRAG] FAIL filter: node {node.id} importance {node.importance_weight} < {min_importance}", extra={"action_code": "GRAPHRAG_DEBUG"})
             return False
         if difficulty_filter and node.difficulty_level != difficulty_filter:
+            access_logger.debug(f"[GraphRAG] FAIL filter: node {node.id} diff {node.difficulty_level} != {difficulty_filter}", extra={"action_code": "GRAPHRAG_DEBUG"})
             return False
         if grade_filter and node.grade != grade_filter:
+            access_logger.debug(f"[GraphRAG] FAIL filter: node {node.id} grade {node.grade} != {grade_filter}", extra={"action_code": "GRAPHRAG_DEBUG"})
             return False
         return True
 

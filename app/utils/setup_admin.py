@@ -1,7 +1,7 @@
 from sqlalchemy.orm import Session
 from app.config import settings
 from app.services.user_service import UserService
-
+from app.core.logger import access_logger, error_logger
 
 def create_initial_admin(db: Session):
     """
@@ -18,7 +18,7 @@ def create_initial_admin(db: Session):
         admin = user_service.get_by_username(settings.ADMIN_USERNAME)
 
     if not admin:
-        print(f"--- Creating admin user: {settings.ADMIN_USERNAME} ---")
+        access_logger.info(f"Creating admin user: {settings.ADMIN_USERNAME}", extra={"action_code": "SETUP"})
 
         admin = user_service.create_admin(
             username=settings.ADMIN_USERNAME,
@@ -26,13 +26,9 @@ def create_initial_admin(db: Session):
             password=settings.ADMIN_PASSWORD
         )
 
-        print(f"✓ Admin user created successfully!")
-        print(f"  Username: {admin.username}")
-        print(f"  Email: {admin.email}")
-        print(f"  Role: {admin.role.value}")
-        print(f"--- Admin setup complete! ---")
+        access_logger.info(f"Admin user created successfully. Username: {admin.username}, Email: {admin.email}", extra={"action_code": "SETUP"})
     else:
-        print(f"--- Admin user already exists: {admin.email} ---")
+        access_logger.info(f"Admin user already exists: {admin.email}", extra={"action_code": "SETUP"})
 
 
 # Optional: Function to reset admin password if needed
@@ -48,12 +44,10 @@ def reset_admin_password(db: Session, new_password: str = None):
 
     admin = user_service.get_by_username(settings.ADMIN_USERNAME)
     if not admin:
-        print(f"❌ Admin user '{settings.ADMIN_USERNAME}' not found!")
+        error_logger.error(f"Admin user '{settings.ADMIN_USERNAME}' not found!", extra={"action_code": "SETUP_ERROR"})
         return
 
     password = new_password or settings.ADMIN_PASSWORD
     user_service.update_password(admin.id, password)
 
-    print(f"✓ Admin password reset successfully!")
-    print(f"  Username: {admin.username}")
-    print(f"  New password: {'***' if new_password else settings.ADMIN_PASSWORD}")
+    access_logger.info("Admin password reset successfully!", extra={"action_code": "SETUP"})

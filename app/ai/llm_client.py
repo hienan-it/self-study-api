@@ -13,6 +13,7 @@ import logging
 from typing import Optional
 from google import genai
 from google.genai import types
+from google.genai.errors import APIError
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 from openai import RateLimitError, APITimeoutError
 
@@ -62,7 +63,7 @@ class LLMClient:
     # ============================================
 
     @retry(
-        retry=retry_if_exception_type((RateLimitError, APITimeoutError)),
+        retry=retry_if_exception_type((RateLimitError, APITimeoutError, ValueError, APIError)),
         wait=wait_exponential(multiplier=1, min=2, max=30),
         stop=stop_after_attempt(3),
     )
@@ -103,7 +104,7 @@ class LLMClient:
         return response.text.strip()
 
     @retry(
-        retry=retry_if_exception_type((RateLimitError, APITimeoutError)),
+        retry=retry_if_exception_type((RateLimitError, APITimeoutError, ValueError, APIError)),
         wait=wait_exponential(multiplier=1, min=2, max=30),
         stop=stop_after_attempt(3),
     )
@@ -113,7 +114,7 @@ class LLMClient:
         system_prompt: Optional[str] = None,
         model: str = MODEL_FAST,
         temperature: float = 0.3,  # Thấp hơn để JSON ổn định hơn
-        max_tokens: int = 3000,
+        max_tokens: int = 8000,
     ) -> dict:
         """
         Gọi LLM với JSON mode — output luôn là valid JSON.

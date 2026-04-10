@@ -22,6 +22,8 @@ async def lifespan(app: FastAPI):
     Shutdown:
     - Clean up resources (if needed)
     """
+    from app.core.logger import access_logger, error_logger
+    
     # ============================================
     # STARTUP LOGIC
     # ============================================
@@ -29,45 +31,32 @@ async def lifespan(app: FastAPI):
     try:
         alembic_cfg = Config("alembic.ini")
         command.upgrade(alembic_cfg, "head")
-        print("✅ Database migrations applied successfully")
-    except Exception:
-        # logger.error(f"❌ Failed to apply database migrations: {e}")
+        access_logger.info("Database migrations applied successfully", extra={"action_code": "STARTUP"})
+    except Exception as e:
+        error_logger.error(f"Failed to apply database migrations: {e}", extra={"action_code": "STARTUP"})
         raise
 
-    print("=" * 50)
-    print("🚀 Starting Study Master API...")
-    print("=" * 50)
+    access_logger.info("Starting Study Master API...", extra={"action_code": "STARTUP"})
 
     # Create initial admin user
     db = SessionLocal()
     try:
         create_initial_admin(db)
     except Exception as e:
-        print(f"❌ Error during startup: {e}")
+        error_logger.error(f"Error during startup: {e}", extra={"action_code": "STARTUP"})
         # Don't raise - let the app start anyway
     finally:
         db.close()
 
-    from app.core.logger import setup_logger
-    import logging
-
-    access_logger = setup_logger("access_logger", "access_log", logging.INFO)
-    error_logger = setup_logger("error_logger", "error_log", logging.DEBUG)
-
     access_logger.info("App started", extra={"action_code": "STARTUP"})
-
-    print("✅ Application startup complete!")
-    print("=" * 50)
+    access_logger.info("Application startup complete!", extra={"action_code": "STARTUP"})
 
     yield
 
     # ============================================
     # SHUTDOWN LOGIC
     # ============================================
-    print("=" * 50)
-    print("🛑 Shutting down Study Master API...")
-    print("=" * 50)
-
+    access_logger.info("Shutting down Study Master API...", extra={"action_code": "SHUTDOWN"})
 
 # ============================================
 # FASTAPI APPLICATION
@@ -93,7 +82,7 @@ register_exception_handlers(app)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "https://self-study-user-ui.vercel.app",
+        "https://self-study-user-ui.vercel.app", "*",
     ],
     allow_origin_regex=r"https://.*\.vercel\.app",
     allow_credentials=True,

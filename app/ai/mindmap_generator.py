@@ -16,8 +16,10 @@ LLM bị ràng buộc chỉ dùng thông tin từ graph context.
 Không được bịa thêm kiến thức ngoài graph.
 """
 
+import traceback
 import json
 import logging
+import asyncio
 from typing import Optional, Dict, Set, List
 from collections import deque
 from sqlalchemy.orm import Session as DBSession
@@ -28,7 +30,7 @@ from app.db.models.knowledge import KnowledgeNode, KnowledgeEdge, DifficultyLeve
 from app.db.models.session import GeneratedMindmap
 from app.db.models.lesson import lesson_knowledge
 
-logger = logging.getLogger(__name__)
+from app.core.logger import access_logger, error_logger
 
 
 # ============================================
@@ -71,7 +73,7 @@ class MindmapTreeBuilder:
         if root_node_id:
             root = ctx.get_node_by_id(root_node_id)
             if not root:
-                logger.warning(f"Root node {root_node_id} không có trong subgraph, tự chọn root.")
+                access_logger.warning(f"Root node {root_node_id} không có trong subgraph, tự chọn root.", extra={"action_code": "MINDMAP"})
                 root = ctx.get_root_candidates()[0]
         else:
             root = ctx.get_root_candidates()[0]
@@ -189,14 +191,16 @@ Trả về JSON hoàn chỉnh của cây đã được làm phong phú."""
 
             # Validate: kiểm tra root node id còn đúng không
             if enriched_data.get("id") != tree.get("id"):
-                logger.warning("LLM thay đổi cấu trúc cây, dùng tree gốc.")
+                access_logger.warning("LLM thay đổi cấu trúc cây, dùng tree gốc.", extra={"action_code": "MINDMAP"})
                 return tree
 
-            logger.info(f"[Mindmap] Enriched thành công cho root node id={tree.get('id')}")
+            access_logger.info(f"[Mindmap] Enriched thành công cho root node id={tree.get('id')}", extra={"action_code": "MINDMAP"})
+            access_logger.info(json.dumps(enriched_data, ensure_ascii=False, indent=2), extra={"action_code": "MINDMAP"})
             return enriched_data
 
         except Exception as e:
-            logger.error(f"[Mindmap] LLM enrichment thất bại: {e}")
+            traceback.print_exc()
+            error_logger.error(f"[Mindmap] LLM enrichment thất bại: {e}", extra={"action_code": "MINDMAP_ERROR"})
             # Fallback: trả về tree gốc không có enrichment
             return tree
 
@@ -231,7 +235,8 @@ Trả về JSON theo format:
             result = await self.llm.complete_json_fast(user_prompt=user_prompt, temperature=0.3)
             return result.get("study_order", [])
         except Exception as e:
-            logger.error(f"[Mindmap] Không thể sinh study order: {e}")
+            traceback.print_exc()
+            error_logger.error(f"[Mindmap] Không thể sinh study order: {e}", extra={"action_code": "MINDMAP_ERROR"})
             return []
 
 
@@ -261,7 +266,7 @@ class MindmapGenerator:
         lesson_ids: List[int],
         root_node_id: Optional[int] = None,
         max_depth: int = 3,
-        min_importance: int = 2,
+        min_importance: int = 1,
         difficulty_filter: Optional[DifficultyLevel] = None,
         enrich_with_llm: bool = True,
     ) -> GeneratedMindmap:
@@ -286,10 +291,19 @@ class MindmapGenerator:
 
         seed_nodes: List[KnowledgeNode] = (
             self.db.query(KnowledgeNode)
-            .join(lesson_knowledge, KnowledgeNode.id == lesson_knowledge.c.knowledge_node_id)
-            .filter(lesson_knowledge.c.lesson_id.in_(lesson_ids))
+            .outerjoin(lesson_knowledge, KnowledgeNode.id == lesson_knowledge.c.knowledge_node_id)
+            .filter(
+                or_(
+                    KnowledgeNode.lesson_id.in_(lesson_ids),
+                    lesson_knowledge.c.lesson_id.in_(lesson_ids)
+                )
+            )
+            .distinct()
             .all()
         )
+
+        access_logger.debug(f"[Mindmap Debug] Queried {len(seed_nodes)} seed_nodes for lesson_ids: {lesson_ids}", extra={"action_code": "MINDMAP_DEBUG"})
+        access_logger.debug(f"[Mindmap Debug] seed_nodes IDs: {[n.id for n in seed_nodes]}", extra={"action_code": "MINDMAP_DEBUG"})
 
         if not seed_nodes:
             raise ValueError(f"Không tìm thấy knowledge nodes cho lessons: {lesson_ids}")
@@ -307,6 +321,7 @@ class MindmapGenerator:
             )
             .all()
         )
+        access_logger.debug(f"[Mindmap Debug] Queried {len(all_edges)} all_edges", extra={"action_code": "MINDMAP_DEBUG"})
 
         # Build neighbor lookup
         neighbor_ids = set()
@@ -319,10 +334,12 @@ class MindmapGenerator:
             .filter(KnowledgeNode.id.in_(neighbor_ids))
             .all()
         )
+        access_logger.debug(f"[Mindmap Debug] Queried {len(all_nodes)} neighbor nodes", extra={"action_code": "MINDMAP_DEBUG"})
         node_lookup = {n.id: n for n in all_nodes}
         for n in seed_nodes:
             node_lookup.setdefault(n.id, n)
 
+        access_logger.debug(f"[Mindmap Debug] Calling extractor.extract_for_lessons with {len(seed_nodes)} seed_nodes, {len(all_edges)} edges, {len(node_lookup)} neighbor lookup...", extra={"action_code": "MINDMAP_DEBUG"})
         # ---- Bước 2: BFS Subgraph Extraction ----
         ctx = self.extractor.extract_for_lessons(
             lesson_nodes=seed_nodes,
@@ -333,9 +350,10 @@ class MindmapGenerator:
             difficulty_filter=difficulty_filter,
         )
 
-        logger.info(
+        access_logger.info(
             f"[Mindmap] Subgraph extracted: {ctx.total_nodes} nodes, "
-            f"{ctx.total_edges} edges, depth={ctx.max_depth_reached}"
+            f"{ctx.total_edges} edges, depth={ctx.max_depth_reached}",
+            extra={"action_code": "MINDMAP"}
         )
 
         # ---- Bước 3: Graph → Tree ----
@@ -347,6 +365,11 @@ class MindmapGenerator:
         # ---- Bước 4: LLM Enrichment (tuỳ chọn) ----
         if enrich_with_llm:
             tree = await self.enricher.enrich(tree, ctx)
+            
+            # Khựng lại 2s để tránh bị Google API block hoặc 5xx Server Error 
+            # do gọi AI liên tục trên gói Free Tier
+            await asyncio.sleep(2)
+            
             study_order = await self.enricher.generate_study_order(tree, ctx)
         else:
             study_order = []
@@ -375,7 +398,7 @@ class MindmapGenerator:
         self.db.commit()
         self.db.refresh(mindmap)
 
-        logger.info(f"[Mindmap] Đã lưu GeneratedMindmap id={mindmap.id} cho user_id={user_id}")
+        access_logger.info(f"[Mindmap] Đã lưu GeneratedMindmap id={mindmap.id} cho user_id={user_id}", extra={"action_code": "MINDMAP"})
         return mindmap
 
 

@@ -19,8 +19,7 @@ from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
 import logging
 import traceback
-
-error_logger = logging.getLogger("error_logger")
+from app.core.logger import error_logger
 
 # ============================================
 # DOMAIN EXCEPTIONS
