@@ -16,6 +16,7 @@ class NodeType(str, enum.Enum):
     DEFINITION = "definition"
     PROCEDURE = "procedure"
     FACT = "fact"
+    VIRTUAL = "virtual"
 
 
 class DifficultyLevel(str, enum.Enum):
@@ -32,6 +33,8 @@ class RelationType(str, enum.Enum):
     RELATES_TO = "relates_to"  # A relates to B
     EXAMPLE_OF = "example_of"  # A is example of B
     PART_OF = "part_of"  # A is part of B
+    DEFINITION = "definition"
+    PROCEDURE = "procedure_of"
 
 
 class KnowledgeNode(BaseModel):
@@ -67,6 +70,12 @@ class KnowledgeNode(BaseModel):
         back_populates="to_node",
         cascade="all, delete-orphan"
     )
+    enrichment = relationship(
+        "KnowledgeNodeEnrichment",
+        back_populates="node",
+        uselist=False,
+        cascade="all, delete-orphan",
+    )
 
     questions = relationship("Question", back_populates="knowledge_node", cascade="all, delete-orphan")
 
@@ -89,3 +98,33 @@ class KnowledgeEdge(BaseModel):
 
     def __repr__(self):
         return f"<KnowledgeEdge(from={self.from_node_id}, to={self.to_node_id}, type={self.relation_type})>"
+
+
+class KnowledgeNodeEnrichment(BaseModel):
+    """
+    Cache LLM enrichment cho từng KnowledgeNode.
+
+    - 1-1 với KnowledgeNode (unique constraint trên knowledge_node_id)
+    - Một khi đã enrich, không cần gọi LLM lại cho node đó nữa
+    - Nếu node description thay đổi → xóa enrichment để trigger re-enrich
+    """
+    __tablename__ = "knowledge_node_enrichments"
+
+    id = Column(Integer, primary_key=True, index=True)
+    knowledge_node_id = Column(
+        Integer,
+        ForeignKey("knowledge_nodes.id", ondelete="CASCADE"),
+        nullable=False,
+        unique=True,  # 1-1 với KnowledgeNode
+        index=True,
+    )
+    learning_note = Column(Text, nullable=True)
+    memory_tip = Column(Text, nullable=True)
+    key_formula = Column(Text, nullable=True)
+    difficulty_note = Column(Text, nullable=True)
+
+    # Relationship ngược lại để dễ access từ KnowledgeNode
+    node = relationship("KnowledgeNode", back_populates="enrichment")
+
+    def __repr__(self):
+        return f"<KnowledgeNodeEnrichment(node_id={self.knowledge_node_id})>"

@@ -69,30 +69,23 @@ class MindmapTreeBuilder:
         if ctx.is_empty():
             return {}
 
-        # Chọn root node
-        if root_node_id:
-            root = ctx.get_node_by_id(root_node_id)
-            if not root:
-                access_logger.warning(f"Root node {root_node_id} không có trong subgraph, tự chọn root.", extra={"action_code": "MINDMAP"})
-                root = ctx.get_root_candidates()[0]
-        else:
-            root = ctx.get_root_candidates()[0]
+        # Build adjacency
+        adjacency: Dict[int, List[int]] = {}
+        has_parent: Set[int] = set()
+        for edge in ctx.edges:
+            adjacency.setdefault(edge.from_node_id, []).append(edge.to_node_id)
+            has_parent.add(edge.to_node_id)
 
-        # BFS spanning tree — tránh chu trình
+        node_lookup = {n.id: n for n in ctx.nodes}
         visited: Set[int] = set()
 
         def build_subtree(node: KnowledgeNode) -> dict:
             visited.add(node.id)
-
-            # Lấy children chưa visit
-            children_nodes = [
-                n for n in ctx.get_children(node.id)
-                if n.id not in visited
-            ]
-
-            # Sắp xếp children: importance_weight giảm dần
-            children_nodes.sort(key=lambda n: -n.importance_weight)
-
+            child_ids = [nid for nid in adjacency.get(node.id, []) if nid not in visited]
+            children_nodes = sorted(
+                [node_lookup[nid] for nid in child_ids if nid in node_lookup],
+                key=lambda n: -n.importance_weight
+            )
             return {
                 "id": node.id,
                 "title": node.title,
@@ -103,7 +96,34 @@ class MindmapTreeBuilder:
                 "children": [build_subtree(child) for child in children_nodes],
             }
 
-        return build_subtree(root)
+        # Tìm real root nếu có
+        if root_node_id and root_node_id in node_lookup:
+            root = node_lookup[root_node_id]
+            tree = build_subtree(root)
+        else:
+            candidates = ctx.get_root_candidates()
+            root = candidates[0]
+            tree = build_subtree(root)
+
+        # Gom các node chưa được visit (orphans / disconnected components)
+        orphans = [n for n in ctx.nodes if n.id not in visited]
+        orphans.sort(key=lambda n: -n.importance_weight)
+
+        if orphans:
+            # Nếu tree thực sự nhỏ so với tổng nodes → wrap vào virtual root
+            if len(orphans) > len(ctx.nodes) * 0.3:  # >30% nodes bị bỏ sót
+                virtual_root = {
+                    "id": -1,  # sentinel
+                    "title": tree.get("title", "Tổng quan"),  # lấy title từ root thật
+                    "node_type": "concept",
+                    "difficulty_level": "basic",
+                    "importance_weight": 10,
+                    "description": "Node tổng hợp tự động",
+                    "children": [tree] + [build_subtree(o) for o in orphans if o.id not in visited],
+                }
+                return virtual_root
+
+        return tree
 
 
 # ============================================
@@ -350,11 +370,48 @@ class MindmapGenerator:
             difficulty_filter=difficulty_filter,
         )
 
+        # ---- Bước 2.5: Tìm hoặc tạo virtual root node ----
+        # Tìm virtual node đã tồn tại cho lesson này
+
+        existing_virtual = (
+            self.db.query(KnowledgeNode)
+            .filter(
+                KnowledgeNode.node_type == "virtual",
+                KnowledgeNode.lesson_id == lesson_ids[0],
+                KnowledgeNode.subject_id == seed_nodes[0].subject_id,
+                KnowledgeNode.module_id == seed_nodes[0].module_id
+            )
+            .first()
+        )
+
+        if existing_virtual:
+            virtual_root_id = existing_virtual.id
+            access_logger.info(f"[Mindmap] Dùng virtual root node đã có id={virtual_root_id}",
+                               extra={"action_code": "MINDMAP"})
+        else:
+            virtual_root_node = KnowledgeNode(
+                title="Tổng quan",
+                node_type="virtual",
+                difficulty_level=DifficultyLevel.BASIC,
+                importance_weight=10,
+                description="Node tổng hợp tự động từ các bài học",
+                lesson_id=lesson_ids[0],
+                subject_id=seed_nodes[0].subject_id,
+                module_id=seed_nodes[0].module_id,
+                grade=seed_nodes[0].grade
+            )
+            self.db.add(virtual_root_node)
+            self.db.flush()
+            virtual_root_id = virtual_root_node.id
+            access_logger.info(f"[Mindmap] Tạo virtual root node mới id={virtual_root_id}",
+                               extra={"action_code": "MINDMAP"})
+
         access_logger.info(
             f"[Mindmap] Subgraph extracted: {ctx.total_nodes} nodes, "
             f"{ctx.total_edges} edges, depth={ctx.max_depth_reached}",
             extra={"action_code": "MINDMAP"}
         )
+        # access_logger.info(json.dumps(ctx, ensure_ascii=False, indent=2), extra={"action_code": "MINDMAP"})
 
         # ---- Bước 3: Graph → Tree ----
         tree = self.tree_builder.build(ctx, root_node_id)
@@ -374,7 +431,14 @@ class MindmapGenerator:
         else:
             study_order = []
 
-        # ---- Bước 5: Lưu vào DB ----
+        # ---- Bước 5: Tạo virtual root node nếu cần ----
+        if tree.get("id") == -1:
+            tree["id"] = virtual_root_id
+            root_node_id_saved = virtual_root_id
+        else:
+            root_node_id_saved = tree.get("id")
+
+        # ---- Bước 6: Lưu mindmap ----
         structure = {
             "tree": tree,
             "study_order": study_order,
@@ -384,10 +448,9 @@ class MindmapGenerator:
                 "lesson_ids": lesson_ids,
                 "max_depth": max_depth,
                 "enriched": enrich_with_llm,
+                "has_virtual_root": root_node_id_saved != tree.get("id"),
             }
         }
-
-        root_node_id_saved = tree.get("id")
 
         mindmap = GeneratedMindmap(
             user_id=user_id,
@@ -395,7 +458,7 @@ class MindmapGenerator:
             structure=structure,
         )
         self.db.add(mindmap)
-        self.db.commit()
+        self.db.commit()  # commit cả virtual_root_node lẫn mindmap
         self.db.refresh(mindmap)
 
         access_logger.info(f"[Mindmap] Đã lưu GeneratedMindmap id={mindmap.id} cho user_id={user_id}", extra={"action_code": "MINDMAP"})

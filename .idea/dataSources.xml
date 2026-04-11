@@ -15,5 +15,12 @@
       <jdbc-url>jdbc:postgresql://localhost:5432/learning_db</jdbc-url>
       <working-dir>$ProjectFileDir$</working-dir>
     </data-source>
+    <data-source source="LOCAL" name="learning_db_ped9@dpg-d7br06juibrs73a47gvg-a.oregon-postgres.render.com" uuid="a4a4301f-309a-4f01-ba7e-77455a82cd94">
+      <driver-ref>postgresql</driver-ref>
+      <synchronize>true</synchronize>
+      <jdbc-driver>org.postgresql.Driver</jdbc-driver>
+      <jdbc-url>jdbc:postgresql://dpg-d7br06juibrs73a47gvg-a.oregon-postgres.render.com:5432/learning_db_ped9</jdbc-url>
+      <working-dir>$ProjectFileDir$</working-dir>
+    </data-source>
   </component>
 </project>
