@@ -8,12 +8,9 @@ Pipeline:
        ↓
   BFS Spanning Tree (loại bỏ chu trình, giữ cấu trúc cây)
        ↓
-  LLM Enrichment (thêm mô tả, ghi chú học tập bằng tiếng Việt)
+  LLM Enrichment (có cache: check DB trước, chỉ gọi LLM cho node chưa có)
        ↓
   JSON Mindmap (lưu vào GeneratedMindmap)
-
-LLM bị ràng buộc chỉ dùng thông tin từ graph context.
-Không được bịa thêm kiến thức ngoài graph.
 """
 
 import traceback
@@ -26,7 +23,7 @@ from sqlalchemy.orm import Session as DBSession
 
 from app.ai.llm_client import LLMClient, get_llm_client
 from app.ai.graph_rag import GraphContext, GraphContextSerializer, SubgraphExtractor
-from app.db.models.knowledge import KnowledgeNode, KnowledgeEdge, DifficultyLevel
+from app.db.models.knowledge import KnowledgeNode, KnowledgeEdge, KnowledgeNodeEnrichment, DifficultyLevel
 from app.db.models.session import GeneratedMindmap
 from app.db.models.lesson import lesson_knowledge
 
@@ -127,111 +124,292 @@ class MindmapTreeBuilder:
 
 
 # ============================================
-# LLM ENRICHMENT
+# LLM ENRICHMENT (with DB cache)
 # ============================================
 
 class MindmapLLMEnricher:
     """
-    Dùng LLM để làm phong phú mindmap tree.
+    Enrich mindmap tree theo batch nhỏ (2 nodes/batch).
 
-    Nhiệm vụ của LLM:
-    - Thêm "learning_note": ghi chú học tập ngắn, dễ nhớ cho mỗi node
-    - Thêm "key_formula": công thức quan trọng (nếu node_type là formula/theorem)
-    - Thêm "memory_tip": mẹo ghi nhớ bằng tiếng Việt
-    - Gợi ý "study_order": thứ tự nên học các nhánh
+    Cache-aside pattern:
+      - Trước khi gọi LLM → check bảng knowledge_node_enrichments
+      - Node đã có enrichment → lấy từ DB, không gọi LLM
+      - Node chưa có → gọi LLM → lưu vào DB để dùng lại lần sau
 
-    LLM KHÔNG được:
-    - Thêm node mới không có trong graph
-    - Thay đổi cấu trúc cây (thêm/xóa children)
-    - Bịa thông tin không có trong description của node
+    Lợi ích:
+      - Lần đầu generate mindmap → gọi LLM bình thường
+      - Từ lần 2 trở đi → 0 LLM call, trả về ngay từ DB
+      - Nhiều user học cùng lesson → chỉ enrich 1 lần
     """
 
-    def __init__(self, llm_client: LLMClient):
+    def __init__(self, llm_client: LLMClient, db: DBSession):
         self.llm = llm_client
+        self.db = db
         self.serializer = GraphContextSerializer()
+
+    # ============================================
+    # CACHE HELPERS
+    # ============================================
+
+    def _load_cached_enrichments(self, node_ids: List[int]) -> Dict[int, KnowledgeNodeEnrichment]:
+        """
+        Batch-load enrichments đã có trong DB.
+
+        Returns:
+            Dict[node_id → KnowledgeNodeEnrichment]
+        """
+        if not node_ids:
+            return {}
+        rows = (
+            self.db.query(KnowledgeNodeEnrichment)
+            .filter(KnowledgeNodeEnrichment.knowledge_node_id.in_(node_ids))
+            .all()
+        )
+        return {row.knowledge_node_id: row for row in rows}
+
+    def _save_enrichments(self, enrichment_data: List[dict]) -> None:
+        """
+        Bulk insert enrichments mới vào DB.
+
+        Args:
+            enrichment_data: List[{knowledge_node_id, learning_note, ...}]
+        """
+        for item in enrichment_data:
+            self.db.add(KnowledgeNodeEnrichment(
+                knowledge_node_id=item["knowledge_node_id"],
+                learning_note=item.get("learning_note", ""),
+                memory_tip=item.get("memory_tip", ""),
+                key_formula=item.get("key_formula", ""),
+                difficulty_note=item.get("difficulty_note", ""),
+            ))
+        try:
+            self.db.commit()
+        except Exception as e:
+            self.db.rollback()
+            error_logger.error(
+                f"[Mindmap] Lưu enrichment cache thất bại: {e}",
+                extra={"action_code": "MINDMAP_ERROR"}
+            )
+
+    def _enrichment_to_dict(self, enrichment: KnowledgeNodeEnrichment) -> dict:
+        return {
+            "learning_note":  enrichment.learning_note  or "",
+            "memory_tip":     enrichment.memory_tip     or "",
+            "key_formula":    enrichment.key_formula    or "",
+            "difficulty_note": enrichment.difficulty_note or "",
+        }
+
+    # ============================================
+    # TREE HELPERS
+    # ============================================
+
+    def _flatten_tree(self, node: dict) -> List[dict]:
+        result = [node]
+        for child in node.get("children", []):
+            result.extend(self._flatten_tree(child))
+        return result
+
+    def _rebuild_tree(self, node: dict, enriched_map: Dict[int, dict]) -> dict:
+        enriched = enriched_map.get(node["id"], node).copy()
+        enriched["children"] = [
+            self._rebuild_tree(child, enriched_map)
+            for child in node.get("children", [])
+        ]
+        return enriched
+
+    # ============================================
+    # LLM BATCH CALL
+    # ============================================
+
+    async def _call_llm_for_batch(self, batch: List[dict], ctx: GraphContext) -> Dict[int, dict]:
+        """
+        Gọi LLM để enrich một batch nodes. Không liên quan đến cache.
+
+        Returns:
+            Dict[node_id → {learning_note, memory_tip, key_formula, difficulty_note}]
+        """
+        nodes_info = []
+        for node in batch:
+            ctx_node = ctx.get_node_by_id(node["id"])
+            description = ctx_node.description if ctx_node else node.get("description", "")
+            nodes_info.append({
+                "id": node["id"],
+                "title": node["title"],
+                "node_type": node["node_type"],
+                "difficulty_level": node["difficulty_level"],
+                "description": description,
+            })
+
+        nodes_json = json.dumps(nodes_info, ensure_ascii=False, indent=2)
+
+        system_prompt = """Bạn là trợ lý giáo dục thông minh chuyên hỗ trợ học sinh Việt Nam.
+Viết bằng tiếng Việt, ngắn gọn, dễ hiểu. CHỈ dùng thông tin được cung cấp, không bịa thêm."""
+
+        user_prompt = f"""Dưới đây là danh sách các node kiến thức cần làm phong phú:
+
+{nodes_json}
+
+Hãy thêm các trường sau cho MỖI node và trả về JSON theo format:
+{{
+  "results": [
+    {{
+      "id": <node_id>,
+      "learning_note": "Ghi chú học tập 1–2 câu, giải thích đơn giản cho học sinh",
+      "memory_tip": "Mẹo ghi nhớ sáng tạo (câu thơ, viết tắt, liên tưởng hình ảnh)",
+      "key_formula": "Công thức/định nghĩa quan trọng nhất (để trống nếu không có)",
+      "difficulty_note": "1 câu về tại sao node này khó/dễ"
+    }}
+  ]
+}}
+
+Trả về đúng {len(batch)} phần tử trong results, theo đúng thứ tự id."""
+
+        result = await self.llm.complete_json_fast(
+            user_prompt=user_prompt,
+            system_prompt=system_prompt,
+            temperature=0.4,
+            max_tokens=8000,
+        )
+
+        return {
+            item["id"]: {
+                "learning_note":  item.get("learning_note", ""),
+                "memory_tip":     item.get("memory_tip", ""),
+                "key_formula":    item.get("key_formula", ""),
+                "difficulty_note": item.get("difficulty_note", ""),
+            }
+            for item in result.get("results", [])
+            if item.get("id") is not None
+        }
+
+    # ============================================
+    # BATCH WITH CACHE-ASIDE
+    # ============================================
+
+    async def _enrich_batch(self, batch: List[dict], ctx: GraphContext) -> Dict[int, dict]:
+        """
+        Cache-aside logic cho 1 batch:
+          1. Tách hit (đã có trong DB) / miss (chưa có)
+          2. Miss → gọi LLM → lưu DB
+          3. Merge tất cả lại
+
+        Virtual nodes (id < 0) bỏ qua cache, không lưu DB.
+
+        Returns:
+            Dict[node_id → enriched_node_dict]
+        """
+        # Virtual nodes không cache
+        real_nodes  = [n for n in batch if n["id"] > 0]
+        virtual_nodes = [n for n in batch if n["id"] <= 0]
+
+        # ---- Step 1: Check cache ----
+        cached = self._load_cached_enrichments([n["id"] for n in real_nodes])
+        hit_ids   = set(cached.keys())
+        miss_nodes = [n for n in real_nodes if n["id"] not in hit_ids]
+
+        access_logger.info(
+            f"[Mindmap] Cache check — hit: {sorted(hit_ids)}, "
+            f"miss: {[n['id'] for n in miss_nodes]}, "
+            f"virtual: {[n['id'] for n in virtual_nodes]}",
+            extra={"action_code": "MINDMAP"}
+        )
+
+        enriched_map: Dict[int, dict] = {}
+
+        # ---- Step 2: Merge cache hits ----
+        for node in real_nodes:
+            if node["id"] in hit_ids:
+                enriched_map[node["id"]] = {**node, **self._enrichment_to_dict(cached[node["id"]])}
+
+        # ---- Step 3: LLM call cho miss + virtual ----
+        llm_targets = miss_nodes + virtual_nodes
+        if llm_targets:
+            try:
+                llm_results = await self._call_llm_for_batch(llm_targets, ctx)
+
+                # Lưu cache chỉ cho miss nodes (không lưu virtual)
+                to_save = [
+                    {"knowledge_node_id": n["id"], **llm_results[n["id"]]}
+                    for n in miss_nodes
+                    if n["id"] in llm_results
+                ]
+                if to_save:
+                    self._save_enrichments(to_save)
+                    access_logger.info(
+                        f"[Mindmap] Đã cache {len(to_save)} enrichments mới vào DB",
+                        extra={"action_code": "MINDMAP"}
+                    )
+
+                # Merge kết quả LLM
+                for node in llm_targets:
+                    enriched_map[node["id"]] = {**node, **llm_results.get(node["id"], {})}
+
+            except Exception as e:
+                traceback.print_exc()
+                error_logger.error(
+                    f"[Mindmap] LLM batch thất bại (nodes={[n['id'] for n in llm_targets]}): {e}",
+                    extra={"action_code": "MINDMAP_ERROR"}
+                )
+                # Fallback: giữ nguyên node gốc
+                for node in llm_targets:
+                    enriched_map[node["id"]] = node
+
+        return enriched_map
+
+    # ============================================
+    # MAIN ENRICH
+    # ============================================
 
     async def enrich(self, tree: dict, ctx: GraphContext) -> dict:
         """
-        Gọi LLM để enrich mindmap tree.
+        Enrich toàn bộ mindmap tree với cache-aside + batch LLM.
 
-        Args:
-            tree: Raw tree từ MindmapTreeBuilder
-            ctx: GraphContext (dùng làm "RAG context" cho LLM)
-
-        Returns:
-            Enriched tree với learning_note, key_formula, memory_tip
+        Sleep chỉ xảy ra giữa các batch — nếu toàn bộ là cache hit
+        thì vẫn sleep (đơn giản, an toàn với Free Tier).
         """
         if not tree:
             return tree
 
-        # Serialize graph context để đưa vào prompt
-        graph_context_text = self.serializer.to_prompt_text(ctx)
-        tree_json = json.dumps(tree, ensure_ascii=False, indent=2)
+        BATCH_SIZE = 2
+        SLEEP_BETWEEN_BATCHES = 2
 
-        system_prompt = """Bạn là trợ lý giáo dục thông minh chuyên hỗ trợ học sinh Việt Nam.
-Nhiệm vụ: Làm phong phú mindmap học tập bằng cách thêm ghi chú học tập vào mỗi node.
+        all_nodes = self._flatten_tree(tree)
+        total_batches = (len(all_nodes) + BATCH_SIZE - 1) // BATCH_SIZE
 
-QUY TẮC BẮT BUỘC:
-1. CHỈ dùng thông tin có trong Knowledge Graph Context được cung cấp
-2. KHÔNG bịa thêm kiến thức không có trong context
-3. KHÔNG thay đổi cấu trúc cây (id, title, children phải giữ nguyên)
-4. Viết bằng tiếng Việt, ngắn gọn, dễ hiểu cho học sinh
-5. Trả về JSON hợp lệ với đúng cấu trúc được yêu cầu"""
+        access_logger.info(
+            f"[Mindmap] Bắt đầu enrich {len(all_nodes)} nodes "
+            f"({total_batches} batches, size={BATCH_SIZE})",
+            extra={"action_code": "MINDMAP"}
+        )
 
-        user_prompt = f"""Dưới đây là Knowledge Graph Context (nguồn kiến thức duy nhất bạn được phép dùng):
+        enriched_map: Dict[int, dict] = {}
 
-{graph_context_text}
+        for i in range(0, len(all_nodes), BATCH_SIZE):
+            batch = all_nodes[i:i + BATCH_SIZE]
+            batch_num = i // BATCH_SIZE + 1
 
----
-
-Dưới đây là cây mindmap cần làm phong phú:
-
-{tree_json}
-
----
-
-Hãy thêm các trường sau vào MỖI node trong cây (kể cả nodes trong children):
-- "learning_note": Ghi chú học tập 1–2 câu, giải thích đơn giản cho học sinh
-- "memory_tip": Mẹo ghi nhớ sáng tạo (ví dụ: câu thơ, viết tắt, liên tưởng hình ảnh)
-- "key_formula": Công thức/định nghĩa quan trọng nhất (để trống "" nếu không có)
-- "difficulty_note": 1 câu về tại sao node này khó/dễ
-
-QUAN TRỌNG: Giữ NGUYÊN tất cả các trường gốc (id, title, node_type, difficulty_level, 
-importance_weight, description, children). Chỉ THÊM các trường mới.
-
-Trả về JSON hoàn chỉnh của cây đã được làm phong phú."""
-
-        try:
-            enriched_data = await self.llm.complete_json_fast(
-                user_prompt=user_prompt,
-                system_prompt=system_prompt,
-                temperature=0.4,
-                max_tokens=4000,
+            access_logger.info(
+                f"[Mindmap] Batch {batch_num}/{total_batches} "
+                f"(node ids: {[n['id'] for n in batch]})",
+                extra={"action_code": "MINDMAP"}
             )
 
-            # Validate: kiểm tra root node id còn đúng không
-            if enriched_data.get("id") != tree.get("id"):
-                access_logger.warning("LLM thay đổi cấu trúc cây, dùng tree gốc.", extra={"action_code": "MINDMAP"})
-                return tree
+            batch_result = await self._enrich_batch(batch, ctx)
+            enriched_map.update(batch_result)
 
-            access_logger.info(f"[Mindmap] Enriched thành công cho root node id={tree.get('id')}", extra={"action_code": "MINDMAP"})
-            access_logger.info(json.dumps(enriched_data, ensure_ascii=False, indent=2), extra={"action_code": "MINDMAP"})
-            return enriched_data
+            if i + BATCH_SIZE < len(all_nodes):
+                await asyncio.sleep(SLEEP_BETWEEN_BATCHES)
 
-        except Exception as e:
-            traceback.print_exc()
-            error_logger.error(f"[Mindmap] LLM enrichment thất bại: {e}", extra={"action_code": "MINDMAP_ERROR"})
-            # Fallback: trả về tree gốc không có enrichment
-            return tree
+        enriched_tree = self._rebuild_tree(tree, enriched_map)
+
+        access_logger.info(
+            f"[Mindmap] Enrich hoàn tất: {len(enriched_map)}/{len(all_nodes)} nodes processed",
+            extra={"action_code": "MINDMAP"}
+        )
+        return enriched_tree
 
     async def generate_study_order(self, tree: dict, ctx: GraphContext) -> List[str]:
-        """
-        Gọi LLM sinh thứ tự học tập được khuyến nghị dựa trên cấu trúc graph.
-
-        Returns:
-            List các bước học theo thứ tự, ví dụ:
-            ["1. Học Khái niệm hàm số trước", "2. Tiếp theo là Tập xác định", ...]
-        """
+        """Sinh thứ tự học tập tối ưu dựa trên cấu trúc graph."""
         graph_context_text = self.serializer.to_prompt_text(ctx)
 
         user_prompt = f"""Dựa trên knowledge graph sau:
@@ -276,7 +454,7 @@ class MindmapGenerator:
     def __init__(self, db: DBSession, llm_client: LLMClient):
         self.db = db
         self.tree_builder = MindmapTreeBuilder()
-        self.enricher = MindmapLLMEnricher(llm_client)
+        self.enricher = MindmapLLMEnricher(llm_client, db)  # db truyền vào để cache
         self.extractor = SubgraphExtractor()
         self.serializer = GraphContextSerializer()
 
@@ -349,13 +527,14 @@ class MindmapGenerator:
             neighbor_ids.add(edge.from_node_id)
             neighbor_ids.add(edge.to_node_id)
 
-        all_nodes: List[KnowledgeNode] = (
+        all_nodes_list: List[KnowledgeNode] = (
             self.db.query(KnowledgeNode)
             .filter(KnowledgeNode.id.in_(neighbor_ids))
             .all()
         )
-        access_logger.debug(f"[Mindmap Debug] Queried {len(all_nodes)} neighbor nodes", extra={"action_code": "MINDMAP_DEBUG"})
-        node_lookup = {n.id: n for n in all_nodes}
+        access_logger.debug(f"[Mindmap Debug] Queried {len(all_nodes_list)} neighbor nodes",
+                            extra={"action_code": "MINDMAP_DEBUG"})
+        node_lookup = {n.id: n for n in all_nodes_list}
         for n in seed_nodes:
             node_lookup.setdefault(n.id, n)
 
@@ -415,7 +594,6 @@ class MindmapGenerator:
 
         # ---- Bước 3: Graph → Tree ----
         tree = self.tree_builder.build(ctx, root_node_id)
-
         if not tree:
             raise ValueError("Không thể tạo cây mindmap từ subgraph.")
 
@@ -458,10 +636,13 @@ class MindmapGenerator:
             structure=structure,
         )
         self.db.add(mindmap)
-        self.db.commit()  # commit cả virtual_root_node lẫn mindmap
+        self.db.commit()
         self.db.refresh(mindmap)
 
-        access_logger.info(f"[Mindmap] Đã lưu GeneratedMindmap id={mindmap.id} cho user_id={user_id}", extra={"action_code": "MINDMAP"})
+        access_logger.info(
+            f"[Mindmap] Đã lưu GeneratedMindmap id={mindmap.id} cho user_id={user_id}",
+            extra={"action_code": "MINDMAP"}
+        )
         return mindmap
 
 

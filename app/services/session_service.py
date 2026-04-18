@@ -25,9 +25,9 @@ class SessionService:
         # Validate lessons exist
         existing_ids = [
             r[0] for r in
-            self.db.query(Lesson.id).filter(Lesson.id.in_(data.selectedLessons)).all()
+            self.db.query(Lesson.id).filter(Lesson.id.in_(data.selected_lessons)).all()
         ]
-        missing = set(data.selectedLessons) - set(existing_ids)
+        missing = set(data.selected_lessons) - set(existing_ids)
         if missing:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -37,7 +37,7 @@ class SessionService:
         session = StudySession(
             user_id=user_id,
             grade=data.grade,
-            selected_lessons=data.selectedLessons,
+            selected_lessons=data.selected_lessons,
         )
         self.db.add(session)
         self.db.commit()
