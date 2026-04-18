@@ -4,11 +4,8 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="81777910-5c37-41d3-a883-dde6ae354888" name="Changes" comment="Update mindmap with virtual root node">
-      <change afterPath="$PROJECT_DIR$/alembic/versions/04f16bb65fa7_add_knowledge_node_enrichments_table.py" afterDir="false" />
+    <list default="true" id="81777910-5c37-41d3-a883-dde6ae354888" name="Changes" comment="Update generate mindmap and question">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/ai/mindmap_generator.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/ai/mindmap_generator.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/services/session_service.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/services/session_service.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -161,7 +158,15 @@
       <option name="project" value="LOCAL" />
       <updated>1775931065365</updated>
     </task>
-    <option name="localTasksCounter" value="6" />
+    <task id="LOCAL-00006" summary="Update generate mindmap and question">
+      <option name="closed" value="true" />
+      <created>1776496800790</created>
+      <option name="number" value="00006" />
+      <option name="presentableId" value="LOCAL-00006" />
+      <option name="project" value="LOCAL" />
+      <updated>1776496800791</updated>
+    </task>
+    <option name="localTasksCounter" value="7" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -195,7 +200,8 @@
     <MESSAGE value="Update models and add lesson, module, subject api" />
     <MESSAGE value="Refactor project" />
     <MESSAGE value="Update mindmap with virtual root node" />
-    <option name="LAST_COMMIT_MESSAGE" value="Update mindmap with virtual root node" />
+    <MESSAGE value="Update generate mindmap and question" />
+    <option name="LAST_COMMIT_MESSAGE" value="Update generate mindmap and question" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
